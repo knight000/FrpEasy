@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"frpeasy/internal/models"
+
+	"github.com/google/uuid"
 )
 
 var ansiRegex = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
@@ -128,7 +130,7 @@ func (pm *ProcessManager) Start(presetID, serverID string, server *models.Server
 
 func (pm *ProcessManager) readLogs(info *ProcessInfo, stdout, stderr io.Reader, onLog func(string, string, models.LogEntry)) {
 	generateID := func() string {
-		return fmt.Sprintf("%d", time.Now().UnixNano())
+		return uuid.New().String()[:8]
 	}
 
 	scanner := bufio.NewScanner(stdout)

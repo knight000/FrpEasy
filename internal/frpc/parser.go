@@ -8,10 +8,10 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	"frpeasy/internal/models"
 
+	"github.com/google/uuid"
 	"github.com/pelletier/go-toml/v2"
 )
 
@@ -335,5 +335,5 @@ func ConvertToModels(config *FrpConfig, presetName string) (*models.Preset, erro
 }
 
 func generateID() string {
-	return fmt.Sprintf("%d", time.Now().UnixNano()/1000000)
+	return uuid.New().String()[:8]
 }

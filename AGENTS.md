@@ -2,33 +2,38 @@
 
 ## Project Overview
 
-FrpEasy is a Wails v2.11.0 desktop application for managing frp (Fast Reverse Proxy) client configurations. It features a Go backend with Vue 3 + Vuetify 3 + TypeScript frontend.
+FrpEasy is a Wails v2.11.0 desktop application for managing frp (Fast Reverse Proxy) client configurations. Go backend with Vue 3 + Vuetify 3 + TypeScript frontend.
 
 ## Build Commands
 
 ```bash
-# Build the complete application
-wails build
-
-# Build for development with hot reload
+# Development with hot reload
 wails dev
 
-# Generate Wails bindings (after adding Go methods)
+# Build complete application
+wails build
+
+# Generate Wails bindings (after adding Go methods to app.go)
 wails generate module
 
-# Build frontend only
+# Frontend only
 cd frontend && npm run build
 
-# Type check frontend only
-cd frontend && npm run type-check
-
-# Build Go backend only
+# Go backend only
 go build ./...
 ```
 
-## Test Commands
+## Lint & Type Check
 
-No test files currently exist in this project. When adding tests:
+```bash
+# Frontend type check (required before commits)
+cd frontend && npm run type-check
+
+# Go vet
+go vet ./...
+```
+
+## Test Commands
 
 ```bash
 # Run all Go tests
@@ -37,10 +42,13 @@ go test ./...
 # Run tests in a specific package
 go test ./internal/frpc
 
-# Run a single test file
+# Run a single test function
 go test -v ./internal/frpc -run TestFunctionName
 
-# Run frontend tests (when added)
+# Run with coverage
+go test -cover ./...
+
+# Frontend tests (when added)
 cd frontend && npm run test
 ```
 
@@ -48,36 +56,30 @@ cd frontend && npm run test
 
 ```
 FrpEasy/
-├── app.go                 # Wails app bindings - all exported methods are available to frontend
-├── main.go               # Application entry point and Wails configuration
+├── app.go                 # Wails app bindings - ALL exported methods available to frontend
+├── main.go               # Entry point, window config, lifecycle hooks
 ├── internal/
 │   ├── frpc/             # frp client management
 │   │   ├── config.go     # TOML config generation
-│   │   ├── downloader.go # frpc binary download with multiple sources
+│   │   ├── downloader.go # frpc binary download
 │   │   ├── manager.go    # Process lifecycle management
-│   │   └── parser.go     # TOML/INI config file parsing
-│   └── models/           # Data models shared between Go and TypeScript
-│       └── types.go      # Server, Service, Preset, LogEntry structs
+│   │   └── parser.go     # TOML/INI config parsing
+│   └── models/           # Shared data models
+│       └── types.go      # Server, Service, Preset, LogEntry, etc.
 ├── frontend/
 │   ├── src/
-│   │   ├── App.vue           # Main application component
-│   │   ├── main.ts           # Vue app entry point
+│   │   ├── App.vue           # Main component
+│   │   ├── main.ts           # Vue entry
 │   │   ├── components/       # Vue components
-│   │   ├── stores/           # Pinia stores
-│   │   │   └── preset.ts     # Main store for presets, servers, services
-│   │   └── plugins/          # Vue plugins (Vuetify, etc.)
-│   └── wailsjs/              # Auto-generated Wails bindings - DO NOT EDIT
-└── build/bin/                # Built application output
+│   │   ├── stores/preset.ts  # Pinia store (main state)
+│   │   └── plugins/          # Vuetify config
+│   └── wailsjs/              # AUTO-GENERATED - DO NOT EDIT
+└── build/bin/                # Output directory
 ```
 
 ## Go Code Style
 
-### Imports
-- Standard library imports first, separated by blank line
-- Third-party imports second, separated by blank line
-- Local imports (frpeasy/internal/*) last
-- Use explicit import aliases only when necessary
-
+### Imports (strictly ordered)
 ```go
 import (
     "context"
@@ -91,67 +93,89 @@ import (
 )
 ```
 
-### Naming Conventions
-- PascalCase for exported functions, types, and constants
-- camelCase for unexported functions and variables
-- Acronyms should be consistent (e.g., `ID`, `HTTP`, `TOML`)
-- Interface names: verb or noun describing behavior (e.g., `ProcessManager`)
+### Naming
+- PascalCase: exported functions, types, constants
+- camelCase: unexported functions, variables
+- Consistent acronyms: `ID`, `HTTP`, `TOML`, `JSON`
 
 ### Error Handling
-- Return errors as the last return value
-- Wrap errors with context using `fmt.Errorf("operation failed: %w", err)`
-- Never ignore errors - handle or propagate them
-- Use `fmt.Println` for simple logging in app.go
-
-### Structs and Types
-- Define types in `internal/models/types.go` for data shared with frontend
-- Add `json` tags for all fields that need serialization
-- Use typed constants for enums (e.g., `ServerStatus`, `ServiceProtocol`)
-
 ```go
-type Server struct {
-    ID             string       `json:"id"`
-    Name           string       `json:"name"`
-    Status         ServerStatus `json:"status"`
+// Always wrap errors with context
+if err != nil {
+    return fmt.Errorf("failed to write config: %w", err)
 }
+
+// Simple logging in app.go
+fmt.Println("Failed to create directory:", err)
 ```
 
-### Exported Methods for Frontend
-- All exported methods on `App` struct are automatically available to frontend
-- Use Wails runtime for dialogs: `runtime.OpenFileDialog`, `runtime.SaveFileDialog`
-- Emit events for async updates: `runtime.EventsEmit(ctx, "event:name", data)`
+### Models
+```go
+// Define in internal/models/types.go
+// Always include json tags
+type Server struct {
+    ID      string       `json:"id"`
+    Name    string       `json:"name"`
+    Status  ServerStatus `json:"status"`
+}
+
+// Use typed constants for enums
+type ServerStatus string
+const (
+    StatusOnline  ServerStatus = "online"
+    StatusOffline ServerStatus = "offline"
+)
+```
+
+### Wails Patterns
+```go
+// Exported methods on App are available to frontend
+func (a *App) StartServer(presetID, serverID string, server models.Server) error {
+    return a.manager.Start(presetID, serverID, &server)
+}
+
+// Emit events for async updates
+runtime.EventsEmit(a.ctx, "download:progress", progress)
+
+// File dialogs
+files, err := runtime.OpenMultipleFilesDialog(a.ctx, runtime.OpenDialogOptions{...})
+```
 
 ## TypeScript/Vue Code Style
 
-### Imports
-- Vue imports first: `import { ref, computed } from 'vue'`
-- Third-party imports second
-- Local imports with `@/` alias third
-- Wails bindings last
-
+### Imports (strictly ordered)
 ```typescript
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime'
 import { StartServer, StopServer } from '../../wailsjs/go/main/App'
 import { models } from '../../wailsjs/go/models'
+import type { LogEntry } from '@/stores/preset'
 ```
 
 ### Components
-- Use `<script setup lang="ts">` syntax
-- Define props with `defineProps<{}>()`
-- Define emits with `defineEmits<{}>()`
-- Use Vuetify components with `v-` prefix
+```vue
+<script setup lang="ts">
+// Props with types
+const props = defineProps<{
+  logs: LogEntry[]
+  title?: string
+}>()
 
-### Stores (Pinia)
-- Use Composition API style with `defineStore('name', () => {})`
-- Export interfaces for types
-- Add `console.log` with `[FunctionName]` prefix for debugging
+// Emits with types
+const emit = defineEmits<{
+  clear: []
+  update: [value: string]
+}>()
+</script>
+```
 
+### Pinia Store
 ```typescript
 export const usePresetStore = defineStore('preset', () => {
   const presets = ref<Preset[]>([])
   
+  // Console log prefix for debugging
   function addPreset(name: string) {
     console.log('[AddPreset] Creating:', name)
   }
@@ -160,11 +184,9 @@ export const usePresetStore = defineStore('preset', () => {
 })
 ```
 
-### Wails Model Usage
-- Use `models.Type.createFrom(source)` when passing data to Go backend
-- This ensures proper serialization for Wails bindings
-
+### Wails Model Conversion
 ```typescript
+// MUST use models.Type.createFrom() when passing to Go
 const serverModel = models.Server.createFrom({
   id: server.id,
   name: server.name,
@@ -173,21 +195,29 @@ const serverModel = models.Server.createFrom({
 await StartServer(presetId, serverId, serverModel, servicesModels)
 ```
 
-### Vue Reactivity
-- Use `:model-value` + `@update:model-value` instead of `v-model` for switches
-- Prevents direct mutation issues with complex objects
-
+### Vue Reactivity Pattern
 ```vue
+<!-- Use :model-value + @update:model-value instead of v-model for objects -->
 <v-switch
   :model-value="server.enabled"
   @update:model-value="toggleServer(server.id)"
 />
 ```
 
+### Wails Event Listeners
+```typescript
+// Setup in store or component
+EventsOn('download:progress', (progress: DownloadProgress) => {
+  downloadProgress.value = progress
+})
+
+// Always cleanup
+EventsOff('download:progress')
+```
+
 ## FRP Configuration Format
 
-The application uses frp v0.61.1 TOML format:
-
+frp v0.61.1 TOML format:
 ```toml
 serverAddr = "example.com"
 serverPort = 7000
@@ -209,19 +239,22 @@ transport.useEncryption = true
 transport.useCompression = true
 ```
 
-**Important**: 
-- `useEncryption` and `useCompression` belong in `[[proxies]]` as `transport.useEncryption`
-- Log config uses `[log]` table format, not dotted notation
+**Critical**: `useEncryption`/`useCompression` are in `[[proxies]]` as `transport.useEncryption`
 
-## Important Files to Update
+## Development Workflow
 
-When adding new backend functionality:
+### Adding Backend Functionality
 1. Add method to `app.go`
-2. Run `wails generate module` to update bindings
+2. Run `wails generate module`
 3. Import and use in `frontend/src/stores/preset.ts`
-4. Update UI in `frontend/src/App.vue` or components
+4. Update UI
 
-When adding new data models:
+### Adding Data Models
 1. Define in `internal/models/types.go`
 2. Run `wails generate module`
-3. Create matching TypeScript interface in `stores/preset.ts`
+3. Create matching TypeScript interface in stores
+
+### Before Committing
+1. Run `cd frontend && npm run type-check`
+2. Run `go vet ./...`
+3. Test with `wails dev`
