@@ -374,7 +374,7 @@
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="servicesDialog" max-width="800">
+    <v-dialog v-model="servicesDialog" max-width="1000">
       <v-card>
         <v-card-title class="d-flex align-center">
           编辑服务规则
@@ -386,32 +386,34 @@
         </v-card-title>
         <v-divider />
         <v-card-text class="pa-4">
-          <v-table v-if="editingServices.length > 0" density="compact" class="border rounded">
-            <thead>
-              <tr>
-                <th>名称</th>
-                <th>协议</th>
-                <th>本地IP</th>
-                <th>本地端口</th>
-                <th>远程端口</th>
-                <th>加密</th>
-                <th>压缩</th>
-                <th style="width: 60px"></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(service, i) in editingServices" :key="i">
-                <td><v-text-field v-model="service.name" density="compact" hide-details variant="outlined" /></td>
-                <td><v-select v-model="service.protocol" :items="['TCP', 'UDP', 'HTTP', 'HTTPS']" density="compact" hide-details variant="outlined" /></td>
-                <td><v-text-field v-model="service.localIp" density="compact" hide-details variant="outlined" /></td>
-                <td><v-text-field v-model.number="service.localPort" density="compact" hide-details type="number" variant="outlined" /></td>
-                <td><v-text-field v-model.number="service.remotePort" density="compact" hide-details type="number" variant="outlined" /></td>
-                <td><v-checkbox v-model="service.useEncryption" density="compact" hide-details color="primary" /></td>
-                <td><v-checkbox v-model="service.useCompression" density="compact" hide-details color="primary" /></td>
-                <td><v-btn icon="mdi-delete" size="small" variant="text" color="error" @click="editingServices.splice(i, 1)" /></td>
-              </tr>
-            </tbody>
-          </v-table>
+          <template v-if="editingServices.length > 0">
+            <v-simple-table dense class="services-table">
+              <thead>
+                <tr>
+                  <th style="width: 180px">名称</th>
+                  <th style="width: 140px">协议</th>
+                  <th style="width: 160px">本地IP</th>
+                  <th style="width: 100px">本地端口</th>
+                  <th style="width: 100px">远程端口</th>
+                  <th style="width: 60px" class="text-center">加密</th>
+                  <th style="width: 60px" class="text-center">压缩</th>
+                  <th style="width: 40px"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(service, i) in editingServices" :key="i">
+                  <td><v-text-field v-model="service.name" density="compact" hide-details variant="outlined" /></td>
+                  <td><v-select v-model="service.protocol" :items="['TCP', 'UDP', 'HTTP', 'HTTPS']" density="compact" hide-details variant="outlined" /></td>
+                  <td><v-text-field v-model="service.localIp" density="compact" hide-details variant="outlined" /></td>
+                  <td><v-text-field v-model.number="service.localPort" density="compact" hide-details type="number" variant="outlined" /></td>
+                  <td><v-text-field v-model.number="service.remotePort" density="compact" hide-details type="number" variant="outlined" /></td>
+                  <td class="text-center"><v-checkbox v-model="service.useEncryption" density="compact" hide-details color="primary" /></td>
+                  <td class="text-center"><v-checkbox v-model="service.useCompression" density="compact" hide-details color="primary" /></td>
+                  <td class="text-center"><v-btn icon="mdi-delete" size="small" variant="text" color="error" @click="editingServices.splice(i, 1)" /></td>
+                </tr>
+              </tbody>
+            </v-simple-table>
+          </template>
           <div v-else class="text-center py-8 text-grey">暂未配置服务规则</div>
         </v-card-text>
         <v-divider />
@@ -1007,5 +1009,19 @@ html, body, .v-application {
 }
 .server-row:hover {
   background-color: rgba(0, 0, 0, 0.04);
+}
+.services-table th {
+  font-size: 13px;
+  font-weight: 500;
+  color: #666 !important;
+}
+.services-table td {
+  padding: 4px 8px;
+}
+.services-table .v-field__input {
+  font-size: 13px;
+}
+.services-table .v-select__selection {
+  font-size: 13px;
 }
 </style>
