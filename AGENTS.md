@@ -47,9 +47,6 @@ go test -v ./internal/frpc -run TestFunctionName
 
 # Run with coverage
 go test -cover ./...
-
-# Frontend tests (when added)
-cd frontend && npm run test
 ```
 
 ## Project Structure
@@ -59,8 +56,10 @@ FrpEasy/
 ├── app.go                 # Wails app bindings - ALL exported methods available to frontend
 ├── main.go               # Entry point, window config, lifecycle hooks
 ├── internal/
+│   ├── config/           # App configuration (TOML)
+│   │   └── config.go     # Config load/save, TOML <-> JSON conversion
 │   ├── frpc/             # frp client management
-│   │   ├── config.go     # TOML config generation
+│   │   ├── config.go     # TOML config generation for frpc
 │   │   ├── downloader.go # frpc binary download
 │   │   ├── manager.go    # Process lifecycle management
 │   │   └── parser.go     # TOML/INI config parsing
@@ -74,8 +73,18 @@ FrpEasy/
 │   │   ├── stores/preset.ts  # Pinia store (main state)
 │   │   └── plugins/          # Vuetify config
 │   └── wailsjs/              # AUTO-GENERATED - DO NOT EDIT
-└── build/bin/                # Output directory
+├── build/bin/                # Output directory
+└── {exe_dir}/frpeasy/        # Runtime data
+    ├── config.toml           # App configuration (presets, servers, services)
+    ├── bin/                  # frpc binary
+    └── configs/              # frpc runtime configs
 ```
+
+## Configuration Storage
+
+- **App Config**: `{exe_dir}/frpeasy/config.toml` - Stores presets, servers, services, enabled state
+- **Clipboard**: `localStorage` - Temporary copy/paste data for presets
+- **Auto-start**: Servers with `enabled: true` auto-start on app launch
 
 ## Go Code Style
 
@@ -86,6 +95,7 @@ import (
     "fmt"
     "os"
 
+    "frpeasy/internal/config"
     "frpeasy/internal/frpc"
     "frpeasy/internal/models"
 
@@ -96,49 +106,28 @@ import (
 ### Naming
 - PascalCase: exported functions, types, constants
 - camelCase: unexported functions, variables
-- Consistent acronyms: `ID`, `HTTP`, `TOML`, `JSON`
+- Consistent acronyms: `ID`, `HTTP`, `TOML`, `JSON`, `IP`
 
 ### Error Handling
 ```go
-// Always wrap errors with context
 if err != nil {
     return fmt.Errorf("failed to write config: %w", err)
 }
-
-// Simple logging in app.go
-fmt.Println("Failed to create directory:", err)
 ```
 
-### Models
+### Config Module Usage
 ```go
-// Define in internal/models/types.go
-// Always include json tags
-type Server struct {
-    ID      string       `json:"id"`
-    Name    string       `json:"name"`
-    Status  ServerStatus `json:"status"`
-}
+// Load config
+appConfig, err := config.LoadConfig(filepath.Join(a.dataDir, "config.toml"))
 
-// Use typed constants for enums
-type ServerStatus string
-const (
-    StatusOnline  ServerStatus = "online"
-    StatusOffline ServerStatus = "offline"
-)
-```
+// Save config
+config.SaveConfig(path, appConfig)
 
-### Wails Patterns
-```go
-// Exported methods on App are available to frontend
-func (a *App) StartServer(presetID, serverID string, server models.Server) error {
-    return a.manager.Start(presetID, serverID, &server)
-}
+// Convert for frontend
+jsonStr := config.ToJSON(appConfig)
 
-// Emit events for async updates
-runtime.EventsEmit(a.ctx, "download:progress", progress)
-
-// File dialogs
-files, err := runtime.OpenMultipleFilesDialog(a.ctx, runtime.OpenDialogOptions{...})
+// Parse from frontend
+appConfig, err := config.FromJSON(jsonStr)
 ```
 
 ## TypeScript/Vue Code Style
@@ -146,47 +135,21 @@ files, err := runtime.OpenMultipleFilesDialog(a.ctx, runtime.OpenDialogOptions{.
 ### Imports (strictly ordered)
 ```typescript
 import { defineStore } from 'pinia'
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime'
-import { StartServer, StopServer } from '../../wailsjs/go/main/App'
+import { StartServer, StopServer, SaveAppConfig, LoadAppConfig } from '../../wailsjs/go/main/App'
 import { models } from '../../wailsjs/go/models'
-import type { LogEntry } from '@/stores/preset'
 ```
 
-### Components
-```vue
-<script setup lang="ts">
-// Props with types
-const props = defineProps<{
-  logs: LogEntry[]
-  title?: string
-}>()
-
-// Emits with types
-const emit = defineEmits<{
-  clear: []
-  update: [value: string]
-}>()
-</script>
-```
-
-### Pinia Store
+### Async Storage Functions
+All storage functions are async - always use `await`:
 ```typescript
-export const usePresetStore = defineStore('preset', () => {
-  const presets = ref<Preset[]>([])
-  
-  // Console log prefix for debugging
-  function addPreset(name: string) {
-    console.log('[AddPreset] Creating:', name)
-  }
-  
-  return { presets, addPreset }
-})
+await saveToStorage(presets.value)
+const loaded = await loadFromStorage()
 ```
 
 ### Wails Model Conversion
 ```typescript
-// MUST use models.Type.createFrom() when passing to Go
 const serverModel = models.Server.createFrom({
   id: server.id,
   name: server.name,
@@ -197,22 +160,10 @@ await StartServer(presetId, serverId, serverModel, servicesModels)
 
 ### Vue Reactivity Pattern
 ```vue
-<!-- Use :model-value + @update:model-value instead of v-model for objects -->
 <v-switch
   :model-value="server.enabled"
   @update:model-value="toggleServer(server.id)"
 />
-```
-
-### Wails Event Listeners
-```typescript
-// Setup in store or component
-EventsOn('download:progress', (progress: DownloadProgress) => {
-  downloadProgress.value = progress
-})
-
-// Always cleanup
-EventsOff('download:progress')
 ```
 
 ## FRP Configuration Format
@@ -224,10 +175,6 @@ serverPort = 7000
 
 [auth]
 token = "xxx"
-
-[log]
-to = "console"
-level = "info"
 
 [[proxies]]
 name = "ssh"
