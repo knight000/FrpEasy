@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"frpeasy/internal/config"
@@ -234,30 +236,50 @@ func (a *App) ImportPresetFromToml() string {
 	return string(content)
 }
 
-func (a *App) ExportPresetAsToml(server models.Server, services []models.Service) string {
-	file, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
-		Title:           "导出 frp 配置",
-		DefaultFilename: "frpc.toml",
-		Filters: []runtime.FileFilter{
-			{DisplayName: "TOML 文件 (*.toml)", Pattern: "*.toml"},
-		},
+func (a *App) ExportPresetAsTomlBatch(serversJson string, servicesJson string, presetName string) string {
+	dir, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "选择 frp 配置导出目录",
 	})
 
-	if err != nil {
+	if err != nil || dir == "" {
 		return ""
 	}
 
-	if file == "" {
+	var servers []struct {
+		Name    string `json:"name"`
+		Address string `json:"address"`
+		Port    int    `json:"port"`
+		Token   string `json:"token"`
+	}
+	if err := json.Unmarshal([]byte(serversJson), &servers); err != nil {
 		return ""
 	}
 
-	content := frpc.GenerateConfig(&server, services)
-	err = os.WriteFile(file, []byte(content), 0644)
-	if err != nil {
+	var services []models.Service
+	if err := json.Unmarshal([]byte(servicesJson), &services); err != nil {
 		return ""
 	}
 
-	return file
+	for _, s := range servers {
+		server := models.Server{
+			Name:    s.Name,
+			Address: s.Address,
+			Port:    s.Port,
+			Token:   s.Token,
+		}
+
+		filename := fmt.Sprintf("frpc-%s.toml", sanitizeFilename(s.Name))
+		filepath := filepath.Join(dir, filename)
+		content := frpc.GenerateConfig(&server, services)
+		os.WriteFile(filepath, []byte(content), 0644)
+	}
+
+	return dir
+}
+
+func sanitizeFilename(name string) string {
+	re := regexp.MustCompile(`[\\/:*?"<>|]`)
+	return re.ReplaceAllString(name, "_")
 }
 
 func (a *App) SaveAppConfig(jsonContent string) error {

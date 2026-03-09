@@ -5,7 +5,7 @@ import {main} from '../models';
 
 export function DownloadFrpc(arg1:string):Promise<void>;
 
-export function ExportPresetAsToml(arg1:models.Server,arg2:Array<models.Service>):Promise<string>;
+export function ExportPresetAsTomlBatch(arg1:string,arg2:string,arg3:string):Promise<string>;
 
 export function ExportPresetToml(arg1:string,arg2:string):Promise<string>;
 

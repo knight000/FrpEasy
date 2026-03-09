@@ -935,13 +935,10 @@ async function handleExportTomlPreset(presetId: string) {
 }
 
 async function handleExportToml(presetId: string) {
-  const preset = store.presets.find(p => p.id === presetId)
-  if (!preset || !preset.servers[0]) return
-
   try {
-    const path = await store.exportPresetToml(presetId, preset.servers[0].id)
+    const path = await store.exportPresetToml(presetId)
     if (path) {
-      snackbar.value = { show: true, message: 'frp 配置已导出', color: 'success' }
+      snackbar.value = { show: true, message: 'frp 配置已导出到目录', color: 'success' }
     }
   } catch (e) {
     snackbar.value = { show: true, message: '导出失败', color: 'error' }

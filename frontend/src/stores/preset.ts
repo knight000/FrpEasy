@@ -11,7 +11,7 @@ import {
   ImportFrpFiles,
   ExportPresetToml,
   ImportPresetFromToml,
-  ExportPresetAsToml,
+  ExportPresetAsTomlBatch,
   SaveAppConfig,
   LoadAppConfig
 } from '../../wailsjs/go/main/App'
@@ -635,17 +635,29 @@ export const usePresetStore = defineStore('preset', () => {
     }
   }
 
-  async function exportPresetToml(presetId: string, serverId: string): Promise<string> {
+  async function exportPresetToml(presetId: string): Promise<string> {
     const preset = presets.value.find((p) => p.id === presetId)
-    if (!preset) return ''
-
-    const server = preset.servers.find((s) => s.id === serverId)
-    if (!server) return ''
+    if (!preset || preset.servers.length === 0) return ''
 
     try {
-      const serverModel = models.Server.createFrom(server)
-      const servicesModels = preset.services.map(s => models.Service.createFrom(s))
-      return await ExportPresetAsToml(serverModel, servicesModels)
+      const serversJson = JSON.stringify(preset.servers.map(s => ({
+        name: s.name,
+        address: s.address,
+        port: s.port,
+        token: s.token,
+      })))
+
+      const servicesJson = JSON.stringify(preset.services.map(s => ({
+        name: s.name,
+        protocol: s.protocol,
+        local_ip: s.localIp,
+        local_port: s.localPort,
+        remote_port: s.remotePort,
+        use_encryption: s.useEncryption,
+        use_compression: s.useCompression,
+      })))
+
+      return await ExportPresetAsTomlBatch(serversJson, servicesJson, preset.name)
     } catch (e) {
       console.error('[ExportPresetToml] Failed:', e)
       return ''

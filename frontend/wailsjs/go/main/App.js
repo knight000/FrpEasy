@@ -6,8 +6,8 @@ export function DownloadFrpc(arg1) {
   return window['go']['main']['App']['DownloadFrpc'](arg1);
 }
 
-export function ExportPresetAsToml(arg1, arg2) {
-  return window['go']['main']['App']['ExportPresetAsToml'](arg1, arg2);
+export function ExportPresetAsTomlBatch(arg1, arg2, arg3) {
+  return window['go']['main']['App']['ExportPresetAsTomlBatch'](arg1, arg2, arg3);
 }
 
 export function ExportPresetToml(arg1, arg2) {
