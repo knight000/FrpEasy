@@ -1,0 +1,725 @@
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
+import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime'
+import {
+  IsFrpcDownloaded,
+  DownloadFrpc,
+  GetFrpcVersion,
+  StartServer,
+  StopServer,
+  ExportToml,
+  ImportFrpFiles,
+  ExportPresetAsJson,
+  ImportPresetFromJson,
+  ExportPresetAsToml
+} from '../../wailsjs/go/main/App'
+import { models } from '../../wailsjs/go/models'
+
+export interface LogEntry {
+  id: string
+  timestamp: number
+  message: string
+  type: string
+}
+
+export interface Server {
+  id: string
+  name: string
+  address: string
+  port: number
+  token: string
+  status: string
+  enabled: boolean
+  logs: LogEntry[]
+  uptime: number
+}
+
+export interface Service {
+  id: string
+  name: string
+  protocol: string
+  localIp: string
+  localPort: number
+  remotePort: number
+  useEncryption: boolean
+  useCompression: boolean
+}
+
+export interface Preset {
+  id: string
+  name: string
+  servers: Server[]
+  services: Service[]
+}
+
+export interface DownloadProgress {
+  totalBytes: number
+  downloaded: number
+  percentage: number
+  isComplete: boolean
+  isError: boolean
+  errorMessage: string
+}
+
+export type DownloadSource = 'github' | 'ghproxy' | 'fastgit' | 'moeyy'
+
+const STORAGE_KEY = 'frpeasy_presets'
+const CLIPBOARD_KEY = 'frpeasy_clipboard'
+
+const generateId = () => Math.random().toString(36).substring(2, 9)
+
+const createDefaultServer = (name: string): Server => ({
+  id: generateId(),
+  name,
+  address: '',
+  port: 7000,
+  token: '',
+  status: 'offline',
+  enabled: false,
+  logs: [],
+  uptime: 0,
+})
+
+const defaultPresets: Preset[] = [
+  {
+    id: generateId(),
+    name: '默认预设',
+    servers: [createDefaultServer('主服务器')],
+    services: [],
+  },
+]
+
+const loadFromStorage = (): Preset[] => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      return parsed.map((p: Preset) => ({
+        ...p,
+        servers: (p.servers || []).map((s: Server) => ({
+          ...s,
+          logs: [],
+          uptime: 0,
+          status: 'offline',
+        })),
+        services: p.services || [],
+      }))
+    }
+  } catch (e) {
+    console.error('Failed to load presets from storage:', e)
+  }
+  return defaultPresets
+}
+
+function saveToStorage(presets: Preset[]) {
+  try {
+    const toSave = presets.map((p) => ({
+      ...p,
+      servers: (p.servers || []).map((s) => ({
+        id: s.id,
+        name: s.name,
+        address: s.address,
+        port: s.port,
+        token: s.token,
+        enabled: s.enabled,
+      })),
+      services: (p.services || []).map((s) => ({
+        id: s.id,
+        name: s.name,
+        protocol: s.protocol,
+        localIp: s.localIp,
+        localPort: s.localPort,
+        remotePort: s.remotePort,
+        useEncryption: s.useEncryption,
+        useCompression: s.useCompression,
+      })),
+    }))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave))
+  } catch (e) {
+    console.error('Failed to save presets to storage:', e)
+  }
+}
+
+export const usePresetStore = defineStore('preset', () => {
+  const presets = ref<Preset[]>(loadFromStorage())
+  const activePresetId = ref<string | null>(presets.value[0]?.id || null)
+  const activeServerId = ref<string | null>(
+    presets.value[0]?.servers?.[0]?.id || null
+  )
+
+  const frpcDownloaded = ref(false)
+  const frpcVersion = ref('')
+  const downloadProgress = ref<DownloadProgress | null>(null)
+  const isDownloading = ref(false)
+
+  const activePreset = computed(() =>
+    presets.value.find((p) => p.id === activePresetId.value)
+  )
+
+  const activeServer = computed(() => {
+    if (!activePreset.value) return null
+    return (
+      activePreset.value.servers.find((s) => s.id === activeServerId.value) ||
+      null
+    )
+  })
+
+  async function initFrpc() {
+    try {
+      frpcDownloaded.value = await IsFrpcDownloaded()
+      console.log('[InitFrpc] Frpc downloaded:', frpcDownloaded.value)
+      if (frpcDownloaded.value) {
+        frpcVersion.value = await GetFrpcVersion()
+        console.log('[InitFrpc] Frpc version:', frpcVersion.value)
+      }
+    } catch (e) {
+      console.error('[InitFrpc] Failed to check frpc status:', e)
+    }
+  }
+
+  async function startDownloadFrpc(source: DownloadSource = 'ghproxy') {
+    if (isDownloading.value) return
+    isDownloading.value = true
+    downloadProgress.value = null
+    console.log('[DownloadFrpc] Starting download with source:', source)
+
+    EventsOn('download:progress', (progress: DownloadProgress) => {
+      downloadProgress.value = progress
+      console.log('[DownloadFrpc] Progress:', progress.percentage.toFixed(1) + '%')
+      if (progress.isComplete || progress.isError) {
+        isDownloading.value = false
+        if (progress.isComplete) {
+          console.log('[DownloadFrpc] Download completed')
+          frpcDownloaded.value = true
+          initFrpc()
+        }
+        if (progress.isError) {
+          console.error('[DownloadFrpc] Download failed:', progress.errorMessage)
+        }
+      }
+    })
+
+    try {
+      await DownloadFrpc(source)
+    } catch (e) {
+      console.error('[DownloadFrpc] Download failed:', e)
+      isDownloading.value = false
+    }
+  }
+
+  function setupLogListener() {
+    EventsOn('server:log', (data: { presetId: string; serverId: string; log: LogEntry }) => {
+      console.log('[ServerLog]', data.log.message)
+      const preset = presets.value.find((p) => p.id === data.presetId)
+      if (!preset) return
+      const server = preset.servers.find((s) => s.id === data.serverId)
+      if (!server) return
+
+      server.logs.push(data.log)
+      if (server.logs.length > 100) {
+        server.logs.shift()
+      }
+    })
+  }
+
+  function cleanupListeners() {
+    EventsOff('download:progress')
+    EventsOff('server:log')
+  }
+
+  function setActivePreset(id: string) {
+    activePresetId.value = id
+    const preset = presets.value.find((p) => p.id === id)
+    if (preset && preset.servers.length > 0) {
+      activeServerId.value = preset.servers[0].id
+    } else {
+      activeServerId.value = null
+    }
+  }
+
+  function setActiveServer(id: string) {
+    activeServerId.value = id
+  }
+
+  async function toggleServer(presetId: string, serverId: string) {
+    console.log('[ToggleServer] Starting...', { presetId, serverId })
+    const preset = presets.value.find((p) => p.id === presetId)
+    if (!preset) {
+      console.error('[ToggleServer] Preset not found:', presetId)
+      return
+    }
+
+    if (!frpcDownloaded.value) {
+      console.error('[ToggleServer] frpc not downloaded')
+      return
+    }
+
+    const server = preset.servers.find((s) => s.id === serverId)
+    if (!server) {
+      console.error('[ToggleServer] Server not found:', serverId)
+      return
+    }
+
+    server.enabled = !server.enabled
+    console.log('[ToggleServer] Server enabled:', server.enabled)
+
+    if (server.enabled) {
+      server.status = 'connecting'
+      server.logs = []
+      server.uptime = 0
+
+      try {
+        console.log('[ToggleServer] Starting server...', { 
+          server: server.name, 
+          address: server.address, 
+          port: server.port 
+        })
+        const serverModel = models.Server.createFrom({
+          id: server.id,
+          name: server.name,
+          address: server.address,
+          port: server.port,
+          token: server.token,
+          status: server.status,
+          enabled: server.enabled,
+          logs: server.logs,
+          uptime: server.uptime,
+        })
+        const servicesModels = preset.services.map(s => models.Service.createFrom({
+          id: s.id,
+          name: s.name,
+          protocol: s.protocol,
+          localIp: s.localIp,
+          localPort: s.localPort,
+          remotePort: s.remotePort,
+          useEncryption: s.useEncryption,
+          useCompression: s.useCompression,
+        }))
+        console.log('[ToggleServer] Calling StartServer with services:', servicesModels.length)
+        await StartServer(presetId, serverId, serverModel, servicesModels)
+        server.status = 'online'
+        console.log('[ToggleServer] Server started successfully')
+      } catch (e) {
+        console.error('[ToggleServer] Failed to start server:', e)
+        server.status = 'error'
+        server.enabled = false
+      }
+    } else {
+      try {
+        console.log('[ToggleServer] Stopping server...')
+        await StopServer(presetId, serverId)
+        console.log('[ToggleServer] Server stopped successfully')
+      } catch (e) {
+        console.error('[ToggleServer] Failed to stop server:', e)
+      }
+      server.status = 'offline'
+      server.logs = []
+      server.uptime = 0
+    }
+
+    saveToStorage(presets.value)
+  }
+
+  function addPreset(name: string, sourcePreset?: Preset) {
+    console.log('[AddPreset] Creating preset:', name, { copyFrom: sourcePreset?.name })
+    const newPreset: Preset = sourcePreset
+      ? {
+          id: generateId(),
+          name,
+          servers: sourcePreset.servers.map((s) => ({
+            ...s,
+            id: generateId(),
+            status: 'offline',
+            enabled: false,
+            logs: [],
+            uptime: 0,
+          })),
+          services: sourcePreset.services.map((s) => ({
+            ...s,
+            id: generateId(),
+          })),
+        }
+      : {
+          id: generateId(),
+          name,
+          servers: [createDefaultServer('主服务器')],
+          services: [],
+        }
+    presets.value.push(newPreset)
+    saveToStorage(presets.value)
+    activePresetId.value = newPreset.id
+    activeServerId.value = newPreset.servers[0]?.id || null
+    console.log('[AddPreset] Preset created:', newPreset.id)
+  }
+
+  async function deletePreset(id: string) {
+    console.log('[DeletePreset] Deleting preset:', id)
+    const index = presets.value.findIndex((p) => p.id === id)
+    if (index === -1) return
+    if (presets.value.length <= 1) return
+
+    const preset = presets.value[index]
+    for (const server of preset.servers) {
+      if (server.enabled) {
+        try {
+          await StopServer(id, server.id)
+        } catch (e) {
+          console.error('[DeletePreset] Failed to stop server:', e)
+        }
+      }
+    }
+
+    presets.value.splice(index, 1)
+    saveToStorage(presets.value)
+
+    if (activePresetId.value === id) {
+      activePresetId.value = presets.value[0]?.id || null
+      activeServerId.value = presets.value[0]?.servers?.[0]?.id || null
+    }
+    console.log('[DeletePreset] Preset deleted')
+  }
+
+  function copyPreset(id: string) {
+    const preset = presets.value.find((p) => p.id === id)
+    if (!preset) return
+    const clipboardData = {
+      name: preset.name,
+      servers: preset.servers.map((s) => ({
+        name: s.name,
+        address: s.address,
+        port: s.port,
+        token: s.token,
+      })),
+      services: preset.services.map((s) => ({
+        name: s.name,
+        protocol: s.protocol,
+        localIp: s.localIp,
+        localPort: s.localPort,
+        remotePort: s.remotePort,
+        useEncryption: s.useEncryption,
+        useCompression: s.useCompression,
+      })),
+    }
+    localStorage.setItem(CLIPBOARD_KEY, JSON.stringify(clipboardData))
+  }
+
+  function hasClipboard(): boolean {
+    return localStorage.getItem(CLIPBOARD_KEY) !== null
+  }
+
+  function pastePreset(name: string): boolean {
+    const stored = localStorage.getItem(CLIPBOARD_KEY)
+    if (!stored) return false
+    try {
+      const data = JSON.parse(stored)
+      addPreset(name, data)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  function addServer(presetId: string, serverData?: Partial<Server>) {
+    const preset = presets.value.find((p) => p.id === presetId)
+    if (!preset) return
+
+    const newServer: Server = {
+      ...createDefaultServer(`服务器 ${preset.servers.length + 1}`),
+      ...serverData,
+      id: generateId(),
+    } as Server
+    preset.servers.push(newServer)
+    saveToStorage(presets.value)
+    activeServerId.value = newServer.id
+  }
+
+  function updateServer(
+    presetId: string,
+    serverId: string,
+    updates: Partial<Server>
+  ) {
+    const preset = presets.value.find((p) => p.id === presetId)
+    if (!preset) return
+
+    const server = preset.servers.find((s) => s.id === serverId)
+    if (!server) return
+
+    Object.assign(server, updates)
+    saveToStorage(presets.value)
+  }
+
+  async function deleteServer(presetId: string, serverId: string) {
+    const preset = presets.value.find((p) => p.id === presetId)
+    if (!preset || preset.servers.length <= 1) return
+
+    const server = preset.servers.find((s) => s.id === serverId)
+    if (server?.enabled) {
+      try {
+        await StopServer(presetId, serverId)
+      } catch (e) {
+        console.error('Failed to stop server:', e)
+      }
+    }
+
+    const index = preset.servers.findIndex((s) => s.id === serverId)
+    if (index === -1) return
+
+    preset.servers.splice(index, 1)
+    saveToStorage(presets.value)
+
+    if (activeServerId.value === serverId) {
+      activeServerId.value = preset.servers[0]?.id || null
+    }
+  }
+
+  function clearLogs(presetId: string, serverId: string) {
+    const preset = presets.value.find((p) => p.id === presetId)
+    if (!preset) return
+
+    const server = preset.servers.find((s) => s.id === serverId)
+    if (!server) return
+
+    server.logs = []
+  }
+
+  function updatePreset(id: string, updates: Partial<Preset>) {
+    const preset = presets.value.find((p) => p.id === id)
+    if (preset) {
+      Object.assign(preset, updates)
+      saveToStorage(presets.value)
+    }
+  }
+
+  function updatePresetName(id: string, name: string) {
+    updatePreset(id, { name })
+  }
+
+  function exportAsJson(presetId: string): string {
+    const preset = presets.value.find((p) => p.id === presetId)
+    if (!preset) return ''
+
+    return JSON.stringify(
+      {
+        name: preset.name,
+        servers: preset.servers.map((s) => ({
+          name: s.name,
+          address: s.address,
+          port: s.port,
+          token: s.token,
+        })),
+        services: preset.services.map((s) => ({
+          name: s.name,
+          protocol: s.protocol,
+          localIp: s.localIp,
+          localPort: s.localPort,
+          remotePort: s.remotePort,
+          useEncryption: s.useEncryption,
+          useCompression: s.useCompression,
+        })),
+      },
+      null,
+      2
+    )
+  }
+
+  async function exportAsToml(presetId: string, serverId: string): Promise<string> {
+    const preset = presets.value.find((p) => p.id === presetId)
+    if (!preset) return ''
+
+    const server = preset.servers.find((s) => s.id === serverId)
+    if (!server) return ''
+
+    try {
+      const serverModel = models.Server.createFrom(server)
+      const servicesModels = preset.services.map(s => models.Service.createFrom(s))
+      return await ExportToml(serverModel, servicesModels)
+    } catch (e) {
+      console.error('Failed to export TOML:', e)
+      return ''
+    }
+  }
+
+  interface ImportResult {
+    preset?: Preset
+    error?: string
+  }
+
+  async function importFrpFiles(): Promise<ImportResult[]> {
+    try {
+      const results = await ImportFrpFiles()
+      return results.map((r: any) => {
+        if (r.preset) {
+          return { preset: r.preset as Preset }
+        }
+        return { error: r.error || '未知错误' }
+      })
+    } catch (e) {
+      console.error('[ImportFrpFiles] Failed:', e)
+      return [{ error: String(e) }]
+    }
+  }
+
+  async function exportPresetJson(presetId: string): Promise<string> {
+    const json = exportAsJson(presetId)
+    if (!json) return ''
+    try {
+      return await ExportPresetAsJson(json)
+    } catch (e) {
+      console.error('[ExportPresetJson] Failed:', e)
+      return ''
+    }
+  }
+
+  async function importPresetJson(): Promise<Preset | null> {
+    try {
+      const json = await ImportPresetFromJson()
+      if (!json) return null
+      const data = JSON.parse(json)
+      return {
+        id: generateId(),
+        name: data.name || '导入的预设',
+        servers: (data.servers || []).map((s: any) => ({
+          ...createDefaultServer(s.name || '服务器'),
+          ...s,
+          id: generateId(),
+          status: 'offline',
+          enabled: false,
+          logs: [],
+          uptime: 0,
+        })),
+        services: (data.services || []).map((s: any) => ({
+          ...s,
+          id: generateId(),
+        })),
+      }
+    } catch (e) {
+      console.error('[ImportPresetJson] Failed:', e)
+      return null
+    }
+  }
+
+  async function exportPresetToml(presetId: string, serverId: string): Promise<string> {
+    const preset = presets.value.find((p) => p.id === presetId)
+    if (!preset) return ''
+
+    const server = preset.servers.find((s) => s.id === serverId)
+    if (!server) return ''
+
+    try {
+      const serverModel = models.Server.createFrom(server)
+      const servicesModels = preset.services.map(s => models.Service.createFrom(s))
+      return await ExportPresetAsToml(serverModel, servicesModels)
+    } catch (e) {
+      console.error('[ExportPresetToml] Failed:', e)
+      return ''
+    }
+  }
+
+  function addImportedPreset(preset: Preset) {
+    presets.value.push(preset)
+    saveToStorage(presets.value)
+    activePresetId.value = preset.id
+    activeServerId.value = preset.servers[0]?.id || null
+  }
+
+  function mergePresets(presetIds: string[], newName: string): boolean {
+    console.log('[MergePresets] Merging presets:', presetIds, 'into:', newName)
+    
+    if (presetIds.length < 2) {
+      console.error('[MergePresets] Need at least 2 presets to merge')
+      return false
+    }
+
+    const mergedPreset: Preset = {
+      id: generateId(),
+      name: newName,
+      servers: [],
+      services: [],
+    }
+
+    const serviceKeySet = new Set<string>()
+
+    for (const presetId of presetIds) {
+      const preset = presets.value.find(p => p.id === presetId)
+      if (!preset) continue
+
+      for (const server of preset.servers) {
+        mergedPreset.servers.push({
+          ...server,
+          id: generateId(),
+          name: `${preset.name} - ${server.name}`,
+          status: 'offline',
+          enabled: false,
+          logs: [],
+          uptime: 0,
+        })
+      }
+
+      for (const service of preset.services) {
+        const serviceKey = `${service.protocol}-${service.localIp}-${service.localPort}-${service.remotePort}`
+        
+        if (serviceKeySet.has(serviceKey)) {
+          console.log('[MergePresets] Skipping duplicate service:', service.name, serviceKey)
+          continue
+        }
+        
+        serviceKeySet.add(serviceKey)
+        
+        mergedPreset.services.push({
+          ...service,
+          id: generateId(),
+        })
+      }
+    }
+
+    if (mergedPreset.servers.length === 0) {
+      console.error('[MergePresets] No servers found in selected presets')
+      return false
+    }
+
+    presets.value.push(mergedPreset)
+    saveToStorage(presets.value)
+    activePresetId.value = mergedPreset.id
+    activeServerId.value = mergedPreset.servers[0]?.id || null
+    
+    console.log('[MergePresets] Merged preset created:', mergedPreset.id)
+    return true
+  }
+
+  return {
+    presets,
+    activePresetId,
+    activePreset,
+    activeServer,
+    frpcDownloaded,
+    frpcVersion,
+    downloadProgress,
+    isDownloading,
+    initFrpc,
+    startDownloadFrpc,
+    setupLogListener,
+    cleanupListeners,
+    setActivePreset,
+    setActiveServer,
+    toggleServer,
+    addPreset,
+    deletePreset,
+    copyPreset,
+    pastePreset,
+    hasClipboard,
+    addServer,
+    updateServer,
+    deleteServer,
+    clearLogs,
+    updatePreset,
+    updatePresetName,
+    exportAsJson,
+    exportAsToml,
+    importFrpFiles,
+    exportPresetJson,
+    importPresetJson,
+    exportPresetToml,
+    addImportedPreset,
+    mergePresets,
+  }
+})

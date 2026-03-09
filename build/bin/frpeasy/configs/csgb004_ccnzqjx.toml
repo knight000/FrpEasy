@@ -1,0 +1,6 @@
+serverAddr = "hk.frp.io"
+serverPort = 7000
+
+[log]
+to = "console"
+level = "info"
