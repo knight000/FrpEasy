@@ -82,7 +82,7 @@
         </template>
       </v-tooltip>
     </v-toolbar>
-    <div ref="scrollContainer" class="log-console" @scroll="onScroll">
+    <div ref="scrollContainer" class="log-console" @scroll="onScroll" @contextmenu.prevent="onContextMenu">
       <div v-for="item in filteredLogs" :key="item.id" class="log-line">
         <span class="log-time">[{{ formatTime(item.timestamp) }}]</span>
         <span
@@ -101,6 +101,28 @@
         {{ searchQuery ? '无匹配结果' : '暂无日志' }}
       </div>
     </div>
+
+    <v-card
+      v-if="showContextMenu"
+      class="context-menu"
+      :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }"
+      @click.stop
+    >
+      <v-list density="compact" bg-color="#2d2d2d">
+        <v-list-item @click="handleCopySelected">
+          <template #prepend>
+            <v-icon size="small">mdi-content-copy</v-icon>
+          </template>
+          <v-list-item-title>复制选中</v-list-item-title>
+        </v-list-item>
+        <v-list-item @click="handleCopyAll">
+          <template #prepend>
+            <v-icon size="small">mdi-content-multiple</v-icon>
+          </template>
+          <v-list-item-title>复制全部</v-list-item-title>
+        </v-list-item>
+      </v-list>
+    </v-card>
   </v-card>
 </template>
 
@@ -122,6 +144,10 @@ const emit = defineEmits<{
 const autoScroll = ref(true)
 const scrollContainer = ref<HTMLDivElement | null>(null)
 const searchQuery = ref('')
+const showContextMenu = ref(false)
+const contextMenuX = ref(0)
+const contextMenuY = ref(0)
+const selectedText = ref('')
 let isUserScrolling = false
 let scrollTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -175,10 +201,14 @@ watch(
 
 onMounted(() => {
   scrollToBottom()
+  document.addEventListener('click', handleClickOutside)
+  document.addEventListener('keydown', handleKeydown)
 })
 
 onUnmounted(() => {
   if (scrollTimer) clearTimeout(scrollTimer)
+  document.removeEventListener('click', handleClickOutside)
+  document.removeEventListener('keydown', handleKeydown)
 })
 
 function formatTime(timestamp: number): string {
@@ -192,6 +222,49 @@ function copyLogs() {
     .map((l) => `[${formatTime(l.timestamp)}] ${l.type.toUpperCase()} ${l.message}`)
     .join('\n')
   navigator.clipboard.writeText(text)
+}
+
+function onContextMenu(e: MouseEvent) {
+  const selection = window.getSelection()
+  selectedText.value = selection ? selection.toString() : ''
+  contextMenuX.value = e.clientX
+  contextMenuY.value = e.clientY
+  showContextMenu.value = true
+}
+
+function copySelectedText() {
+  if (selectedText.value) {
+    navigator.clipboard.writeText(selectedText.value)
+  }
+}
+
+function copyAllLogs() {
+  copyLogs()
+}
+
+function handleCopySelected() {
+  copySelectedText()
+  showContextMenu.value = false
+}
+
+function handleCopyAll() {
+  copyAllLogs()
+  showContextMenu.value = false
+}
+
+function handleClickOutside(e: MouseEvent) {
+  if (!showContextMenu.value) return
+  const target = e.target as HTMLElement
+  const menuEl = document.querySelector('.context-menu')
+  if (menuEl && !menuEl.contains(target)) {
+    showContextMenu.value = false
+  }
+}
+
+function handleKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape' && showContextMenu.value) {
+    showContextMenu.value = false
+  }
 }
 </script>
 
@@ -292,5 +365,11 @@ function copyLogs() {
   text-align: center;
   color: #888;
   padding: 32px;
+}
+
+.context-menu {
+  position: fixed;
+  z-index: 1000;
+  min-width: 120px;
 }
 </style>
