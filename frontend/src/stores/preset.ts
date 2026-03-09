@@ -9,13 +9,14 @@ import {
   StopServer,
   ExportToml,
   ImportFrpFiles,
-  ExportPresetAsJson,
-  ImportPresetFromJson,
+  ExportPresetToml,
+  ImportPresetFromToml,
   ExportPresetAsToml,
   SaveAppConfig,
   LoadAppConfig
 } from '../../wailsjs/go/main/App'
 import { models } from '../../wailsjs/go/models'
+import TOML from 'smol-toml'
 
 export interface LogEntry {
   id: string
@@ -519,32 +520,29 @@ export const usePresetStore = defineStore('preset', () => {
     await updatePreset(id, { name })
   }
 
-  function exportAsJson(presetId: string): string {
+  function exportPresetTomlContent(presetId: string): string {
     const preset = presets.value.find((p) => p.id === presetId)
     if (!preset) return ''
 
-    return JSON.stringify(
-      {
-        name: preset.name,
-        servers: preset.servers.map((s) => ({
-          name: s.name,
-          address: s.address,
-          port: s.port,
-          token: s.token,
-        })),
-        services: preset.services.map((s) => ({
-          name: s.name,
-          protocol: s.protocol,
-          localIp: s.localIp,
-          localPort: s.localPort,
-          remotePort: s.remotePort,
-          useEncryption: s.useEncryption,
-          useCompression: s.useCompression,
-        })),
-      },
-      null,
-      2
-    )
+    const tomlObj = {
+      name: preset.name,
+      servers: preset.servers.map((s) => ({
+        name: s.name,
+        address: s.address,
+        port: s.port,
+        token: s.token,
+      })),
+      services: preset.services.map((s) => ({
+        name: s.name,
+        protocol: s.protocol,
+        local_ip: s.localIp,
+        local_port: s.localPort,
+        remote_port: s.remotePort,
+        use_encryption: s.useEncryption,
+        use_compression: s.useCompression,
+      })),
+    }
+    return TOML.stringify(tomlObj)
   }
 
   async function exportAsToml(presetId: string, serverId: string): Promise<string> {
@@ -584,41 +582,55 @@ export const usePresetStore = defineStore('preset', () => {
     }
   }
 
-  async function exportPresetJson(presetId: string): Promise<string> {
-    const json = exportAsJson(presetId)
-    if (!json) return ''
+  async function exportPresetTomlPreset(presetId: string): Promise<string> {
+    const preset = presets.value.find((p) => p.id === presetId)
+    if (!preset) return ''
+    
+    const tomlContent = exportPresetTomlContent(presetId)
+    if (!tomlContent) return ''
+    
     try {
-      return await ExportPresetAsJson(json)
+      return await ExportPresetToml(preset.name, tomlContent)
     } catch (e) {
-      console.error('[ExportPresetJson] Failed:', e)
+      console.error('[ExportPresetTomlPreset] Failed:', e)
       return ''
     }
   }
 
-  async function importPresetJson(): Promise<Preset | null> {
+  async function importPresetToml(): Promise<Preset | null> {
     try {
-      const json = await ImportPresetFromJson()
-      if (!json) return null
-      const data = JSON.parse(json)
+      const tomlStr = await ImportPresetFromToml()
+      if (!tomlStr) return null
+      
+      const data = TOML.parse(tomlStr) as any
       return {
         id: generateId(),
         name: data.name || '导入的预设',
         servers: (data.servers || []).map((s: any) => ({
           ...createDefaultServer(s.name || '服务器'),
-          ...s,
           id: generateId(),
-          status: 'offline',
+          name: s.name,
+          address: s.address,
+          port: s.port,
+          token: s.token,
+          status: 'offline' as const,
           enabled: false,
           logs: [],
           uptime: 0,
         })),
         services: (data.services || []).map((s: any) => ({
-          ...s,
           id: generateId(),
+          name: s.name,
+          protocol: s.protocol,
+          localIp: s.local_ip,
+          localPort: s.local_port,
+          remotePort: s.remote_port,
+          useEncryption: s.use_encryption ?? false,
+          useCompression: s.use_compression ?? false,
         })),
       }
     } catch (e) {
-      console.error('[ImportPresetJson] Failed:', e)
+      console.error('[ImportPresetToml] Failed:', e)
       return null
     }
   }
@@ -782,11 +794,11 @@ export const usePresetStore = defineStore('preset', () => {
     clearLogs,
     updatePreset,
     updatePresetName,
-    exportAsJson,
+    exportPresetTomlContent,
     exportAsToml,
     importFrpFiles,
-    exportPresetJson,
-    importPresetJson,
+    exportPresetTomlPreset,
+    importPresetToml,
     exportPresetToml,
     addImportedPreset,
     mergePresets,

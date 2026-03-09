@@ -5,9 +5,9 @@ import {main} from '../models';
 
 export function DownloadFrpc(arg1:string):Promise<void>;
 
-export function ExportPresetAsJson(arg1:string):Promise<string>;
-
 export function ExportPresetAsToml(arg1:models.Server,arg2:Array<models.Service>):Promise<string>;
+
+export function ExportPresetToml(arg1:string,arg2:string):Promise<string>;
 
 export function ExportToml(arg1:models.Server,arg2:Array<models.Service>):Promise<string>;
 
@@ -23,7 +23,7 @@ export function GetServerUptime(arg1:string,arg2:string):Promise<number>;
 
 export function ImportFrpFiles():Promise<Array<main.ImportResult>>;
 
-export function ImportPresetFromJson():Promise<string>;
+export function ImportPresetFromToml():Promise<string>;
 
 export function IsFrpcDownloaded():Promise<boolean>;
 

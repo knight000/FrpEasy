@@ -92,8 +92,8 @@
           <v-icon start>mdi-file-import</v-icon>
           导入 frp 配置
         </v-btn>
-        <v-btn block color="info" variant="tonal" @click="emit('importJson')">
-          <v-icon start>mdi-code-json</v-icon>
+        <v-btn block color="info" variant="tonal" @click="emit('importToml')">
+          <v-icon start>mdi-file-document-outline</v-icon>
           导入 FrpEasy 预设
         </v-btn>
       </div>
@@ -120,7 +120,7 @@
           <v-list-item-title>粘贴</v-list-item-title>
         </v-list-item>
         <v-divider />
-        <v-list-item @click="doExportJson">
+        <v-list-item @click="doExportTomlPreset">
           <template #prepend>
             <v-icon>mdi-export</v-icon>
           </template>
@@ -162,8 +162,8 @@ const emit = defineEmits<{
   (e: 'copy', id: string): void
   (e: 'paste'): void
   (e: 'importFrp'): void
-  (e: 'importJson'): void
-  (e: 'exportJson', id: string): void
+  (e: 'importToml'): void
+  (e: 'exportTomlPreset', id: string): void
   (e: 'exportToml', id: string): void
   (e: 'mergePresets'): void
 }>()
@@ -214,9 +214,9 @@ function doDelete() {
   }
 }
 
-function doExportJson() {
+function doExportTomlPreset() {
   if (contextMenu.value.preset) {
-    emit('exportJson', contextMenu.value.preset.id)
+    emit('exportTomlPreset', contextMenu.value.preset.id)
   }
 }
 

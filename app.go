@@ -185,12 +185,12 @@ func (a *App) ImportFrpFiles() []ImportResult {
 	return results
 }
 
-func (a *App) ExportPresetAsJson(presetJson string) string {
+func (a *App) ExportPresetToml(presetName string, tomlContent string) string {
 	file, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
 		Title:           "导出 FrpEasy 预设",
-		DefaultFilename: "preset.json",
+		DefaultFilename: fmt.Sprintf("预设-%s.toml", presetName),
 		Filters: []runtime.FileFilter{
-			{DisplayName: "JSON 文件 (*.json)", Pattern: "*.json"},
+			{DisplayName: "TOML 文件 (*.toml)", Pattern: "*.toml"},
 		},
 	})
 
@@ -202,7 +202,7 @@ func (a *App) ExportPresetAsJson(presetJson string) string {
 		return ""
 	}
 
-	err = os.WriteFile(file, []byte(presetJson), 0644)
+	err = os.WriteFile(file, []byte(tomlContent), 0644)
 	if err != nil {
 		return ""
 	}
@@ -210,11 +210,11 @@ func (a *App) ExportPresetAsJson(presetJson string) string {
 	return file
 }
 
-func (a *App) ImportPresetFromJson() string {
+func (a *App) ImportPresetFromToml() string {
 	file, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
 		Title: "导入 FrpEasy 预设",
 		Filters: []runtime.FileFilter{
-			{DisplayName: "JSON 文件 (*.json)", Pattern: "*.json"},
+			{DisplayName: "TOML 文件 (*.toml)", Pattern: "*.toml"},
 		},
 	})
 

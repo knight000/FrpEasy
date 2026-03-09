@@ -10,8 +10,8 @@
       @paste="handlePastePreset"
       @delete="handleDeletePreset"
       @importFrp="handleImportFrp"
-      @importJson="handleImportJson"
-      @exportJson="handleExportJson"
+      @importToml="handleImportToml"
+      @exportTomlPreset="handleExportTomlPreset"
       @exportToml="handleExportToml"
       @mergePresets="openMergeDialog"
     />
@@ -911,9 +911,9 @@ async function handleImportFrp() {
   }
 }
 
-async function handleImportJson() {
+async function handleImportToml() {
   try {
-    const preset = await store.importPresetJson()
+    const preset = await store.importPresetToml()
     if (preset) {
       store.addImportedPreset(preset)
       snackbar.value = { show: true, message: '预设已导入', color: 'success' }
@@ -923,9 +923,9 @@ async function handleImportJson() {
   }
 }
 
-async function handleExportJson(presetId: string) {
+async function handleExportTomlPreset(presetId: string) {
   try {
-    const path = await store.exportPresetJson(presetId)
+    const path = await store.exportPresetTomlPreset(presetId)
     if (path) {
       snackbar.value = { show: true, message: '预设已导出', color: 'success' }
     }

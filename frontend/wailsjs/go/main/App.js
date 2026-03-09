@@ -6,12 +6,12 @@ export function DownloadFrpc(arg1) {
   return window['go']['main']['App']['DownloadFrpc'](arg1);
 }
 
-export function ExportPresetAsJson(arg1) {
-  return window['go']['main']['App']['ExportPresetAsJson'](arg1);
-}
-
 export function ExportPresetAsToml(arg1, arg2) {
   return window['go']['main']['App']['ExportPresetAsToml'](arg1, arg2);
+}
+
+export function ExportPresetToml(arg1, arg2) {
+  return window['go']['main']['App']['ExportPresetToml'](arg1, arg2);
 }
 
 export function ExportToml(arg1, arg2) {
@@ -42,8 +42,8 @@ export function ImportFrpFiles() {
   return window['go']['main']['App']['ImportFrpFiles']();
 }
 
-export function ImportPresetFromJson() {
-  return window['go']['main']['App']['ImportPresetFromJson']();
+export function ImportPresetFromToml() {
+  return window['go']['main']['App']['ImportPresetFromToml']();
 }
 
 export function IsFrpcDownloaded() {
