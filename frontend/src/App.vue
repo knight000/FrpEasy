@@ -631,6 +631,7 @@ const mergedPresetName = ref('')
 const selectedMergeIds = ref<string[]>([])
 
 onMounted(async () => {
+  await store.initPresets()
   await store.initFrpc()
   store.setupLogListener()
   await store.autoStartEnabledServers()

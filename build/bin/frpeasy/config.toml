@@ -1,9 +1,9 @@
 [[presets]]
-id = '4fafbf32'
+id = '981496bd'
 name = 'frpc_minecraft'
 
 [[presets.servers]]
-id = 'ac12153e'
+id = 'f9e8e1f3'
 name = '主服务器'
 address = 'gz.knight000.top'
 port = 7000
@@ -11,7 +11,7 @@ token = 'pO6aT0pY7aQ4rK2mN2aI4rN3'
 enabled = false
 
 [[presets.services]]
-id = '4cde7bd1'
+id = 'c53d60c9'
 name = 'Minecraft_tcp_25565'
 protocol = 'TCP'
 local_ip = '127.0.0.1'
@@ -21,7 +21,7 @@ use_encryption = false
 use_compression = true
 
 [[presets.services]]
-id = 'a80106cb'
+id = '217a70c9'
 name = 'Minecraft_tcp_25566'
 protocol = 'TCP'
 local_ip = '127.0.0.1'
@@ -31,19 +31,19 @@ use_encryption = false
 use_compression = true
 
 [[presets]]
-id = '9cd631d8'
+id = 'fb8c504d'
 name = 'frpc_minecraft_shanghai'
 
 [[presets.servers]]
-id = '51c4ed1b'
+id = 'f2b62ac3'
 name = '主服务器'
 address = '101.43.83.75'
 port = 1190
 token = '4e8e6d9fa1ab12d574cb03ba81ea9496'
-enabled = true
+enabled = false
 
 [[presets.services]]
-id = '8fceae24'
+id = '0debeb86'
 name = 'Minecraft_tcp_25565'
 protocol = 'TCP'
 local_ip = '127.0.0.1'
@@ -53,7 +53,7 @@ use_encryption = false
 use_compression = true
 
 [[presets.services]]
-id = '37c9a30c'
+id = 'a7b924c5'
 name = 'Minecraft_tcp_25566'
 protocol = 'TCP'
 local_ip = '127.0.0.1'

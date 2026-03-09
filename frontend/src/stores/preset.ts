@@ -791,5 +791,6 @@ export const usePresetStore = defineStore('preset', () => {
     addImportedPreset,
     mergePresets,
     autoStartEnabledServers,
+    initPresets,
   }
 })
