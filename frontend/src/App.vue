@@ -207,7 +207,9 @@
               <LogConsole
                 :logs="singleServer.logs"
                 :title="`${singleServer.name} - 控制台输出`"
+                :fullscreen="logFullscreen"
                 @clear="handleClearLogs(singleServer.id)"
+                @toggle-fullscreen="logFullscreen = !logFullscreen"
               />
             </div>
           </template>
@@ -289,7 +291,9 @@
               <LogConsole
                 :logs="currentServer.logs"
                 :title="`${currentServer.name} - 控制台输出`"
+                :fullscreen="logFullscreen"
                 @clear="handleClearLogs(currentServer.id)"
+                @toggle-fullscreen="logFullscreen = !logFullscreen"
               />
             </div>
           </template>
@@ -629,6 +633,8 @@ const snackbar = ref({ show: false, message: '', color: 'success' })
 const mergeDialog = ref(false)
 const mergedPresetName = ref('')
 const selectedMergeIds = ref<string[]>([])
+
+const logFullscreen = ref(false)
 
 onMounted(async () => {
   await store.initPresets()

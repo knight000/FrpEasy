@@ -1,5 +1,5 @@
 <template>
-  <v-card class="log-card" theme="dark">
+  <v-card :class="['log-card', { 'log-card--fullscreen': fullscreen }]" theme="dark">
     <v-toolbar color="#2d2d2d" density="compact" flat>
       <v-toolbar-title class="text-body-2 text-grey-lighten-1">
         {{ title || '控制台输出' }}
@@ -8,6 +8,19 @@
         自动滚动
       </v-chip>
       <v-spacer />
+      
+      <v-text-field
+        v-if="fullscreen"
+        v-model="searchQuery"
+        density="compact"
+        variant="outlined"
+        hide-details
+        placeholder="搜索日志..."
+        prepend-inner-icon="mdi-magnify"
+        clearable
+        class="search-input mr-2"
+      />
+      
       <v-tooltip text="切换自动滚动" location="top">
         <template #activator="{ props }">
           <v-btn
@@ -44,9 +57,33 @@
           />
         </template>
       </v-tooltip>
+      <v-tooltip v-if="!fullscreen" text="全屏" location="top">
+        <template #activator="{ props }">
+          <v-btn
+            v-bind="props"
+            density="compact"
+            icon="mdi-fullscreen"
+            size="small"
+            variant="text"
+            @click="emit('toggleFullscreen')"
+          />
+        </template>
+      </v-tooltip>
+      <v-tooltip v-else text="退出全屏" location="top">
+        <template #activator="{ props }">
+          <v-btn
+            v-bind="props"
+            density="compact"
+            icon="mdi-fullscreen-exit"
+            size="small"
+            variant="text"
+            @click="emit('toggleFullscreen')"
+          />
+        </template>
+      </v-tooltip>
     </v-toolbar>
     <div ref="scrollContainer" class="log-console" @scroll="onScroll">
-      <div v-for="item in logs" :key="item.id" class="log-line">
+      <div v-for="item in filteredLogs" :key="item.id" class="log-line">
         <span class="log-time">[{{ formatTime(item.timestamp) }}]</span>
         <span
           :class="{
@@ -60,30 +97,44 @@
         </span>
         <span class="log-message">{{ item.message }}</span>
       </div>
-      <div v-if="logs.length === 0" class="log-empty">
-        暂无日志
+      <div v-if="filteredLogs.length === 0" class="log-empty">
+        {{ searchQuery ? '无匹配结果' : '暂无日志' }}
       </div>
     </div>
   </v-card>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import type { LogEntry } from '@/stores/preset'
 
 const props = defineProps<{
   logs: LogEntry[]
   title?: string
+  fullscreen?: boolean
 }>()
 
 const emit = defineEmits<{
   clear: []
+  toggleFullscreen: []
 }>()
 
 const autoScroll = ref(true)
 const scrollContainer = ref<HTMLDivElement | null>(null)
+const searchQuery = ref('')
 let isUserScrolling = false
 let scrollTimer: ReturnType<typeof setTimeout> | null = null
+
+const filteredLogs = computed(() => {
+  if (!searchQuery.value) {
+    return props.logs
+  }
+  const query = searchQuery.value.toLowerCase()
+  return props.logs.filter(log => 
+    log.message.toLowerCase().includes(query) ||
+    log.type.toLowerCase().includes(query)
+  )
+})
 
 function onScroll() {
   if (!scrollContainer.value) return
@@ -136,7 +187,8 @@ function formatTime(timestamp: number): string {
 }
 
 function copyLogs() {
-  const text = props.logs
+  const logsToCopy = searchQuery.value ? filteredLogs.value : props.logs
+  const text = logsToCopy
     .map((l) => `[${formatTime(l.timestamp)}] ${l.type.toUpperCase()} ${l.message}`)
     .join('\n')
   navigator.clipboard.writeText(text)
@@ -149,10 +201,30 @@ function copyLogs() {
   flex-direction: column;
   height: 280px;
   background-color: #1e1e1e;
+  transition: all 0.3s ease;
+}
+
+.log-card--fullscreen {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 280px;
+  height: 100vh;
+  z-index: 100;
+  border-radius: 0;
+}
+
+.log-card--fullscreen .log-console {
+  height: calc(100vh - 48px);
+}
+
+.search-input {
+  max-width: 200px;
 }
 
 .log-console {
-  height: calc(100% - 48px);
+  flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
   background-color: #1e1e1e;
