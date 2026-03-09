@@ -185,6 +185,7 @@ func extractFrpc(binDir, archivePath string) error {
 	if runtime.GOOS == "windows" {
 		cmd := exec.Command("powershell", "-Command",
 			fmt.Sprintf("Expand-Archive -Path '%s' -DestinationPath '%s' -Force", archivePath, binDir))
+		hideWindow(cmd)
 		if err := cmd.Run(); err != nil {
 			return err
 		}
@@ -228,6 +229,7 @@ func GetFrpcVersion(binDir string) (string, error) {
 	}
 
 	cmd := exec.Command(frpcPath, "-v")
+	hideWindow(cmd)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", err

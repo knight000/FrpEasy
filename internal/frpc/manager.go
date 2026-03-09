@@ -23,6 +23,15 @@ func stripANSI(str string) string {
 	return ansiRegex.ReplaceAllString(str, "")
 }
 
+func hideWindow(cmd *exec.Cmd) {
+	if runtime.GOOS == "windows" {
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			HideWindow:    true,
+			CreationFlags: 0x08000000,
+		}
+	}
+}
+
 type ProcessManager struct {
 	mu        sync.RWMutex
 	processes map[string]*ProcessInfo
@@ -87,13 +96,7 @@ func (pm *ProcessManager) Start(presetID, serverID string, server *models.Server
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cmd := exec.CommandContext(ctx, frpcPath, "-c", configPath)
-
-	if runtime.GOOS == "windows" {
-		cmd.SysProcAttr = &syscall.SysProcAttr{
-			HideWindow:    true,
-			CreationFlags: 0x08000000,
-		}
-	}
+	hideWindow(cmd)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -217,7 +220,9 @@ func (pm *ProcessManager) Stop(presetID, serverID string) error {
 	if info.Cmd != nil && info.Cmd.Process != nil {
 		if info.Cmd.ProcessState == nil {
 			if runtime.GOOS == "windows" {
-				exec.Command("taskkill", "/F", "/T", "/PID", fmt.Sprintf("%d", info.Cmd.Process.Pid)).Run()
+				cmd := exec.Command("taskkill", "/F", "/T", "/PID", fmt.Sprintf("%d", info.Cmd.Process.Pid))
+				hideWindow(cmd)
+				cmd.Run()
 			} else {
 				info.Cmd.Process.Signal(syscall.SIGTERM)
 				time.Sleep(1 * time.Second)
@@ -246,7 +251,9 @@ func (pm *ProcessManager) StopAll() {
 		}
 		if info.Cmd != nil && info.Cmd.Process != nil && info.Cmd.ProcessState == nil {
 			if runtime.GOOS == "windows" {
-				exec.Command("taskkill", "/F", "/T", "/PID", fmt.Sprintf("%d", info.Cmd.Process.Pid)).Run()
+				cmd := exec.Command("taskkill", "/F", "/T", "/PID", fmt.Sprintf("%d", info.Cmd.Process.Pid))
+				hideWindow(cmd)
+				cmd.Run()
 			} else {
 				info.Cmd.Process.Signal(syscall.SIGTERM)
 			}
