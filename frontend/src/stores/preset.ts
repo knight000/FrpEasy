@@ -11,7 +11,9 @@ import {
   ImportFrpFiles,
   ExportPresetAsJson,
   ImportPresetFromJson,
-  ExportPresetAsToml
+  ExportPresetAsToml,
+  SaveAppConfig,
+  LoadAppConfig
 } from '../../wailsjs/go/main/App'
 import { models } from '../../wailsjs/go/models'
 
@@ -63,7 +65,6 @@ export interface DownloadProgress {
 
 export type DownloadSource = 'github' | 'ghproxy' | 'fastgit' | 'moeyy'
 
-const STORAGE_KEY = 'frpeasy_presets'
 const CLIPBOARD_KEY = 'frpeasy_clipboard'
 
 const generateId = () => Math.random().toString(36).substring(2, 9)
@@ -89,32 +90,37 @@ const defaultPresets: Preset[] = [
   },
 ]
 
-const loadFromStorage = (): Preset[] => {
+const loadFromStorage = async (): Promise<Preset[]> => {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY)
+    const stored = await LoadAppConfig()
+    console.log('[LoadFromStorage] LoadAppConfig returned:', stored ? 'data' : 'empty')
     if (stored) {
       const parsed = JSON.parse(stored)
-      return parsed.map((p: Preset) => ({
-        ...p,
-        servers: (p.servers || []).map((s: Server) => ({
-          ...s,
-          logs: [],
-          uptime: 0,
-          status: 'offline',
-        })),
-        services: p.services || [],
-      }))
+      console.log('[LoadFromStorage] Parsed presets count:', parsed.presets?.length || 0)
+      if (parsed.presets && Array.isArray(parsed.presets)) {
+        return parsed.presets.map((p: Preset) => ({
+          ...p,
+          servers: (p.servers || []).map((s: Server) => ({
+            ...s,
+            logs: [],
+            uptime: 0,
+            status: 'offline',
+          })),
+          services: p.services || [],
+        }))
+      }
     }
   } catch (e) {
-    console.error('Failed to load presets from storage:', e)
+    console.error('Failed to load presets from config:', e)
   }
-  return defaultPresets
+  return []
 }
 
-function saveToStorage(presets: Preset[]) {
+async function saveToStorage(presets: Preset[]) {
   try {
     const toSave = presets.map((p) => ({
-      ...p,
+      id: p.id,
+      name: p.name,
       servers: (p.servers || []).map((s) => ({
         id: s.id,
         name: s.name,
@@ -134,18 +140,16 @@ function saveToStorage(presets: Preset[]) {
         useCompression: s.useCompression,
       })),
     }))
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave))
+    await SaveAppConfig(JSON.stringify({ presets: toSave }))
   } catch (e) {
     console.error('Failed to save presets to storage:', e)
   }
 }
 
 export const usePresetStore = defineStore('preset', () => {
-  const presets = ref<Preset[]>(loadFromStorage())
-  const activePresetId = ref<string | null>(presets.value[0]?.id || null)
-  const activeServerId = ref<string | null>(
-    presets.value[0]?.servers?.[0]?.id || null
-  )
+  const presets = ref<Preset[]>([])
+  const activePresetId = ref<string | null>(null)
+  const activeServerId = ref<string | null>(null)
 
   const frpcDownloaded = ref(false)
   const frpcVersion = ref('')
@@ -163,6 +167,27 @@ export const usePresetStore = defineStore('preset', () => {
       null
     )
   })
+
+  async function initPresets() {
+    console.log('[InitPresets] Loading presets...')
+    const loaded = await loadFromStorage()
+    console.log('[InitPresets] Loaded presets count:', loaded.length)
+    
+    if (loaded.length > 0) {
+      presets.value = loaded
+      activePresetId.value = loaded[0].id
+      activeServerId.value = loaded[0].servers?.[0]?.id || null
+      console.log('[InitPresets] Loaded from config file')
+      return
+    }
+    
+    console.log('[InitPresets] Creating default presets')
+    presets.value = defaultPresets
+    activePresetId.value = defaultPresets[0].id
+    activeServerId.value = defaultPresets[0].servers?.[0]?.id || null
+    await saveToStorage(defaultPresets)
+    console.log('[InitPresets] Default presets created and saved')
+  }
 
   async function initFrpc() {
     try {
@@ -312,15 +337,15 @@ export const usePresetStore = defineStore('preset', () => {
       } catch (e) {
         console.error('[ToggleServer] Failed to stop server:', e)
       }
-      server.status = 'offline'
+    server.status = 'offline'
       server.logs = []
       server.uptime = 0
     }
 
-    saveToStorage(presets.value)
+    await saveToStorage(presets.value)
   }
 
-  function addPreset(name: string, sourcePreset?: Preset) {
+  async function addPreset(name: string, sourcePreset?: Preset) {
     console.log('[AddPreset] Creating preset:', name, { copyFrom: sourcePreset?.name })
     const newPreset: Preset = sourcePreset
       ? {
@@ -346,7 +371,7 @@ export const usePresetStore = defineStore('preset', () => {
           services: [],
         }
     presets.value.push(newPreset)
-    saveToStorage(presets.value)
+    await saveToStorage(presets.value)
     activePresetId.value = newPreset.id
     activeServerId.value = newPreset.servers[0]?.id || null
     console.log('[AddPreset] Preset created:', newPreset.id)
@@ -370,7 +395,7 @@ export const usePresetStore = defineStore('preset', () => {
     }
 
     presets.value.splice(index, 1)
-    saveToStorage(presets.value)
+    await saveToStorage(presets.value)
 
     if (activePresetId.value === id) {
       activePresetId.value = presets.value[0]?.id || null
@@ -419,7 +444,7 @@ export const usePresetStore = defineStore('preset', () => {
     }
   }
 
-  function addServer(presetId: string, serverData?: Partial<Server>) {
+  async function addServer(presetId: string, serverData?: Partial<Server>) {
     const preset = presets.value.find((p) => p.id === presetId)
     if (!preset) return
 
@@ -429,11 +454,11 @@ export const usePresetStore = defineStore('preset', () => {
       id: generateId(),
     } as Server
     preset.servers.push(newServer)
-    saveToStorage(presets.value)
+    await saveToStorage(presets.value)
     activeServerId.value = newServer.id
   }
 
-  function updateServer(
+  async function updateServer(
     presetId: string,
     serverId: string,
     updates: Partial<Server>
@@ -445,7 +470,7 @@ export const usePresetStore = defineStore('preset', () => {
     if (!server) return
 
     Object.assign(server, updates)
-    saveToStorage(presets.value)
+    await saveToStorage(presets.value)
   }
 
   async function deleteServer(presetId: string, serverId: string) {
@@ -465,7 +490,7 @@ export const usePresetStore = defineStore('preset', () => {
     if (index === -1) return
 
     preset.servers.splice(index, 1)
-    saveToStorage(presets.value)
+    await saveToStorage(presets.value)
 
     if (activeServerId.value === serverId) {
       activeServerId.value = preset.servers[0]?.id || null
@@ -482,16 +507,16 @@ export const usePresetStore = defineStore('preset', () => {
     server.logs = []
   }
 
-  function updatePreset(id: string, updates: Partial<Preset>) {
+  async function updatePreset(id: string, updates: Partial<Preset>) {
     const preset = presets.value.find((p) => p.id === id)
     if (preset) {
       Object.assign(preset, updates)
-      saveToStorage(presets.value)
+      await saveToStorage(presets.value)
     }
   }
 
-  function updatePresetName(id: string, name: string) {
-    updatePreset(id, { name })
+  async function updatePresetName(id: string, name: string) {
+    await updatePreset(id, { name })
   }
 
   function exportAsJson(presetId: string): string {
@@ -615,14 +640,14 @@ export const usePresetStore = defineStore('preset', () => {
     }
   }
 
-  function addImportedPreset(preset: Preset) {
+  async function addImportedPreset(preset: Preset) {
     presets.value.push(preset)
-    saveToStorage(presets.value)
+    await saveToStorage(presets.value)
     activePresetId.value = preset.id
     activeServerId.value = preset.servers[0]?.id || null
   }
 
-  function mergePresets(presetIds: string[], newName: string): boolean {
+  async function mergePresets(presetIds: string[], newName: string): Promise<boolean> {
     console.log('[MergePresets] Merging presets:', presetIds, 'into:', newName)
     
     if (presetIds.length < 2) {
@@ -678,7 +703,7 @@ export const usePresetStore = defineStore('preset', () => {
     }
 
     presets.value.push(mergedPreset)
-    saveToStorage(presets.value)
+    await saveToStorage(presets.value)
     activePresetId.value = mergedPreset.id
     activeServerId.value = mergedPreset.servers[0]?.id || null
     

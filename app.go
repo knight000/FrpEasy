@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"frpeasy/internal/config"
 	"frpeasy/internal/frpc"
 	"frpeasy/internal/models"
 
@@ -257,4 +258,25 @@ func (a *App) ExportPresetAsToml(server models.Server, services []models.Service
 	}
 
 	return file
+}
+
+func (a *App) SaveAppConfig(jsonContent string) error {
+	appConfig, err := config.FromJSON(jsonContent)
+	if err != nil {
+		fmt.Println("Failed to parse config JSON:", err)
+		return fmt.Errorf("failed to parse config: %w", err)
+	}
+	fmt.Println("Saving config, presets count:", len(appConfig.Presets))
+	return config.SaveConfig(filepath.Join(a.dataDir, "config.toml"), appConfig)
+}
+
+func (a *App) LoadAppConfig() string {
+	appConfig, err := config.LoadConfig(filepath.Join(a.dataDir, "config.toml"))
+	if err != nil {
+		fmt.Println("Failed to load config:", err)
+		return ""
+	}
+	jsonStr := config.ToJSON(appConfig)
+	fmt.Println("Loaded config, presets count:", len(appConfig.Presets))
+	return jsonStr
 }

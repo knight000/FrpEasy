@@ -29,6 +29,10 @@ export function IsFrpcDownloaded():Promise<boolean>;
 
 export function IsServerRunning(arg1:string,arg2:string):Promise<boolean>;
 
+export function LoadAppConfig():Promise<string>;
+
+export function SaveAppConfig(arg1:string):Promise<void>;
+
 export function StartServer(arg1:string,arg2:string,arg3:models.Server,arg4:Array<models.Service>):Promise<void>;
 
 export function StopServer(arg1:string,arg2:string):Promise<void>;

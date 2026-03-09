@@ -1,0 +1,63 @@
+[[presets]]
+id = '4fafbf32'
+name = 'frpc_minecraft'
+
+[[presets.servers]]
+id = 'ac12153e'
+name = '主服务器'
+address = 'gz.knight000.top'
+port = 7000
+token = 'pO6aT0pY7aQ4rK2mN2aI4rN3'
+enabled = false
+
+[[presets.services]]
+id = '4cde7bd1'
+name = 'Minecraft_tcp_25565'
+protocol = 'TCP'
+local_ip = '127.0.0.1'
+local_port = 25565
+remote_port = 25565
+use_encryption = false
+use_compression = true
+
+[[presets.services]]
+id = 'a80106cb'
+name = 'Minecraft_tcp_25566'
+protocol = 'TCP'
+local_ip = '127.0.0.1'
+local_port = 25566
+remote_port = 25566
+use_encryption = false
+use_compression = true
+
+[[presets]]
+id = '9cd631d8'
+name = 'frpc_minecraft_shanghai'
+
+[[presets.servers]]
+id = '51c4ed1b'
+name = '主服务器'
+address = '101.43.83.75'
+port = 1190
+token = '4e8e6d9fa1ab12d574cb03ba81ea9496'
+enabled = true
+
+[[presets.services]]
+id = '8fceae24'
+name = 'Minecraft_tcp_25565'
+protocol = 'TCP'
+local_ip = '127.0.0.1'
+local_port = 25565
+remote_port = 25565
+use_encryption = false
+use_compression = true
+
+[[presets.services]]
+id = '37c9a30c'
+name = 'Minecraft_tcp_25566'
+protocol = 'TCP'
+local_ip = '127.0.0.1'
+local_port = 25566
+remote_port = 25566
+use_encryption = false
+use_compression = true

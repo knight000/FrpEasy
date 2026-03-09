@@ -54,6 +54,14 @@ export function IsServerRunning(arg1, arg2) {
   return window['go']['main']['App']['IsServerRunning'](arg1, arg2);
 }
 
+export function LoadAppConfig() {
+  return window['go']['main']['App']['LoadAppConfig']();
+}
+
+export function SaveAppConfig(arg1) {
+  return window['go']['main']['App']['SaveAppConfig'](arg1);
+}
+
 export function StartServer(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['StartServer'](arg1, arg2, arg3, arg4);
 }

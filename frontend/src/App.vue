@@ -962,10 +962,10 @@ function toggleMergeSelection(presetId: string) {
   }
 }
 
-function doMergePresets() {
+async function doMergePresets() {
   if (selectedMergeIds.value.length < 2 || !mergedPresetName.value.trim()) return
   
-  const success = store.mergePresets(selectedMergeIds.value, mergedPresetName.value.trim())
+  const success = await store.mergePresets(selectedMergeIds.value, mergedPresetName.value.trim())
   
   if (success) {
     mergeDialog.value = false
