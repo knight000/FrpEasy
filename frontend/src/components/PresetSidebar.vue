@@ -51,7 +51,7 @@
         <v-list-item
           v-for="server in preset.servers"
           :key="server.id"
-          class="ml-2 mb-1 rounded-lg"
+          class="mb-1 rounded-lg"
           density="compact"
           lines="one"
         >
@@ -255,5 +255,10 @@ onUnmounted(() => {
   height: 8px;
   border-radius: 50%;
   display: inline-block;
+  margin-right: 8px;
+}
+
+.v-list-group .v-list-item {
+  padding-inline-start: 20px !important;
 }
 </style>
