@@ -88,6 +88,13 @@ func (pm *ProcessManager) Start(presetID, serverID string, server *models.Server
 	ctx, cancel := context.WithCancel(context.Background())
 	cmd := exec.CommandContext(ctx, frpcPath, "-c", configPath)
 
+	if runtime.GOOS == "windows" {
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			HideWindow:    true,
+			CreationFlags: 0x08000000,
+		}
+	}
+
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		cancel()
