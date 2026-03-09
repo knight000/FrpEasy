@@ -686,6 +686,50 @@ export const usePresetStore = defineStore('preset', () => {
     return true
   }
 
+  async function autoStartEnabledServers() {
+    if (!frpcDownloaded.value) return
+    
+    for (const preset of presets.value) {
+      for (const server of preset.servers) {
+        if (server.enabled) {
+          console.log('[AutoStart] Starting server:', server.name)
+          try {
+            server.status = 'connecting'
+            server.logs = []
+            const serverModel = models.Server.createFrom({
+              id: server.id,
+              name: server.name,
+              address: server.address,
+              port: server.port,
+              token: server.token,
+              status: server.status,
+              enabled: server.enabled,
+              logs: server.logs,
+              uptime: server.uptime,
+            })
+            const servicesModels = preset.services.map(s => models.Service.createFrom({
+              id: s.id,
+              name: s.name,
+              protocol: s.protocol,
+              localIp: s.localIp,
+              localPort: s.localPort,
+              remotePort: s.remotePort,
+              useEncryption: s.useEncryption,
+              useCompression: s.useCompression,
+            }))
+            await StartServer(preset.id, server.id, serverModel, servicesModels)
+            server.status = 'online'
+            console.log('[AutoStart] Server started:', server.name)
+          } catch (e) {
+            console.error('[AutoStart] Failed to start server:', server.name, e)
+            server.status = 'error'
+            server.enabled = false
+          }
+        }
+      }
+    }
+  }
+
   return {
     presets,
     activePresetId,
@@ -721,5 +765,6 @@ export const usePresetStore = defineStore('preset', () => {
     exportPresetToml,
     addImportedPreset,
     mergePresets,
+    autoStartEnabledServers,
   }
 })

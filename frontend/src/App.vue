@@ -633,6 +633,7 @@ const selectedMergeIds = ref<string[]>([])
 onMounted(async () => {
   await store.initFrpc()
   store.setupLogListener()
+  await store.autoStartEnabledServers()
 })
 
 onUnmounted(() => {
