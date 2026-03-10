@@ -45,22 +45,68 @@ func ParseTomlFile(filePath string) (*FrpConfig, error) {
 	return ParseTomlContent(content)
 }
 
-var basicProxyFields = map[string]bool{
-	"name":                     true,
-	"type":                     true,
-	"localIP":                  true,
-	"localPort":                true,
-	"remotePort":               true,
-	"transport":                false,
-	"transport.useEncryption":  true,
-	"transport.useCompression": true,
+func isBasicProxyField(key string) bool {
+	lowerKey := strings.ToLower(key)
+	switch lowerKey {
+	case "name", "type", "localip", "localport", "remoteport",
+		"transport.useencryption", "transport.usecompression":
+		return true
+	case "transport":
+		return false
+	}
+	return false
 }
 
-func isBasicProxyField(key string) bool {
-	if basic, ok := basicProxyFields[key]; ok {
-		return basic
+func getMapStringCI(m map[string]interface{}, key string) string {
+	lowerKey := strings.ToLower(key)
+	for k, v := range m {
+		if strings.ToLower(k) == lowerKey {
+			if s, ok := v.(string); ok {
+				return s
+			}
+			break
+		}
 	}
-	return key == "transport.useEncryption" || key == "transport.useCompression"
+	return ""
+}
+
+func getMapIntCI(m map[string]interface{}, key string) int64 {
+	lowerKey := strings.ToLower(key)
+	for k, v := range m {
+		if strings.ToLower(k) == lowerKey {
+			if i, ok := v.(int64); ok {
+				return i
+			}
+			break
+		}
+	}
+	return 0
+}
+
+func getMapBoolCI(m map[string]interface{}, key string) bool {
+	lowerKey := strings.ToLower(key)
+	for k, v := range m {
+		if strings.ToLower(k) == lowerKey {
+			if b, ok := v.(bool); ok {
+				return b
+			}
+			break
+		}
+	}
+	return false
+}
+
+func getMapMapCI(m map[string]interface{}, key string) map[string]interface{} {
+	lowerKey := strings.ToLower(key)
+	for k, v := range m {
+		if strings.ToLower(k) == lowerKey {
+			if sub, ok := v.(map[string]interface{}); ok {
+				return sub
+			}
+			break
+		}
+	}
+	return nil
 }
 
 func extractProxyToml(proxy map[string]interface{}) (string, bool) {
@@ -68,7 +114,7 @@ func extractProxyToml(proxy map[string]interface{}) (string, bool) {
 	hasAdvanced := false
 
 	for key, value := range proxy {
-		if key == "transport" {
+		if strings.EqualFold(key, "transport") {
 			if transport, ok := value.(map[string]interface{}); ok {
 				for tkey, tvalue := range transport {
 					fullKey := "transport." + tkey
@@ -157,27 +203,27 @@ func ParseTomlContent(content []byte) (*FrpConfig, error) {
 					LocalIP: "127.0.0.1",
 				}
 
-				if v, ok := proxy["name"].(string); ok {
+				if v := getMapStringCI(proxy, "name"); v != "" {
 					proxyConfig.Name = v
 				}
-				if v, ok := proxy["type"].(string); ok {
+				if v := getMapStringCI(proxy, "type"); v != "" {
 					proxyConfig.Type = v
 				}
-				if v, ok := proxy["localIP"].(string); ok {
+				if v := getMapStringCI(proxy, "localIP"); v != "" {
 					proxyConfig.LocalIP = v
 				}
-				if v, ok := proxy["localPort"].(int64); ok {
+				if v := getMapIntCI(proxy, "localPort"); v != 0 {
 					proxyConfig.LocalPort = int(v)
 				}
-				if v, ok := proxy["remotePort"].(int64); ok {
+				if v := getMapIntCI(proxy, "remotePort"); v != 0 {
 					proxyConfig.RemotePort = int(v)
 				}
 
-				if transport, ok := proxy["transport"].(map[string]interface{}); ok {
-					if v, ok := transport["useEncryption"].(bool); ok {
+				if transport := getMapMapCI(proxy, "transport"); transport != nil {
+					if v := getMapBoolCI(transport, "useEncryption"); v {
 						proxyConfig.UseEncryption = v
 					}
-					if v, ok := transport["useCompression"].(bool); ok {
+					if v := getMapBoolCI(transport, "useCompression"); v {
 						proxyConfig.UseCompression = v
 					}
 				}
