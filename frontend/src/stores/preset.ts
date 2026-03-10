@@ -23,6 +23,7 @@ import { models } from '../../wailsjs/go/models'
 import TOML from 'smol-toml'
 import { createServerModel, createServiceModels } from '../helpers/modelConverters'
 import { toSerializableServer, toSerializableService } from '../helpers/serializers'
+import { parseAdvancedConfigToBasic, createDefaultService } from '../helpers/serviceParser'
 
 export interface LogEntry {
   id: string
@@ -117,7 +118,16 @@ const loadFromStorage = async (): Promise<Preset[]> => {
             uptime: 0,
             status: 'offline',
           })),
-          services: p.services || [],
+          services: (p.services || []).map((s: Service) => {
+            const service = {
+              ...createDefaultService(),
+              ...s,
+            }
+            if (service.is_advanced) {
+              parseAdvancedConfigToBasic(service)
+            }
+            return service
+          }),
         }))
       }
     }
@@ -603,21 +613,8 @@ export const usePresetStore = defineStore('preset', () => {
           uptime: 0,
         })),
         services: (data.services || []).map((s: any) => {
-          if (s.is_advanced) {
-            return {
-              id: generateId(),
-              name: s.name,
-              protocol: 'TCP' as const,
-              local_ip: '127.0.0.1',
-              local_port: 0,
-              remote_port: 0,
-              use_encryption: false,
-              use_compression: false,
-              advanced_config: s.advanced_config ?? '',
-              is_advanced: true,
-            }
-          }
-          return {
+          const service = {
+            ...createDefaultService(),
             id: generateId(),
             name: s.name,
             protocol: s.protocol,
@@ -626,9 +623,13 @@ export const usePresetStore = defineStore('preset', () => {
             remote_port: s.remote_port,
             use_encryption: s.use_encryption ?? false,
             use_compression: s.use_compression ?? false,
-            advanced_config: '',
-            is_advanced: false,
+            advanced_config: s.advanced_config ?? '',
+            is_advanced: s.is_advanced ?? false,
           }
+          if (service.is_advanced) {
+            parseAdvancedConfigToBasic(service)
+          }
+          return service
         }),
       }
     } catch (e) {

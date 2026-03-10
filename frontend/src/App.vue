@@ -809,6 +809,7 @@ import TOML from 'smol-toml'
 import { getStatusDotClass, getStatusChipColor, getStatusText } from '@/composables/useStatus'
 import { useSnackbar } from '@/composables/useSnackbar'
 import { useDownloadSource } from '@/composables/useDownloadSource'
+import { parseAdvancedConfigToBasic } from '@/helpers/serviceParser'
 
 const store = usePresetStore()
 const { snackbar, showSnackbar } = useSnackbar()
@@ -1086,51 +1087,6 @@ function generateDefaultAdvancedConfig(service: Service) {
 
 function getAdvancedConfigHint(service: Service): string {
   return `name = "${service.name}"\ntype = "${service.protocol.toLowerCase()}"\nlocalIP = "${service.local_ip}"\nlocalPort = ${service.local_port}\nremotePort = ${service.remote_port}`
-}
-
-function parseAdvancedConfigToBasic(service: Service) {
-  if (!service.advanced_config || !service.advanced_config.trim()) return
-  
-  try {
-    const parsed = TOML.parse(service.advanced_config) as any
-    
-    service.protocol = 'TCP'
-    service.local_ip = ''
-    service.local_port = 0
-    service.remote_port = 0
-    service.use_encryption = false
-    service.use_compression = false
-    
-    if (parsed.name && typeof parsed.name === 'string') {
-      service.name = parsed.name
-    }
-    if (parsed.type && typeof parsed.type === 'string') {
-      const typeMap: Record<string, string> = {
-        'tcp': 'TCP',
-        'udp': 'UDP',
-        'http': 'HTTP',
-        'https': 'HTTPS',
-      }
-      service.protocol = typeMap[parsed.type.toLowerCase()] || parsed.type.toUpperCase()
-    }
-    if (parsed.localIP !== undefined) {
-      service.local_ip = String(parsed.localIP)
-    }
-    if (parsed.localPort !== undefined) {
-      service.local_port = Number(parsed.localPort)
-    }
-    if (parsed.remotePort !== undefined) {
-      service.remote_port = Number(parsed.remotePort)
-    }
-    if (parsed.transport?.useEncryption !== undefined) {
-      service.use_encryption = Boolean(parsed.transport.useEncryption)
-    }
-    if (parsed.transport?.useCompression !== undefined) {
-      service.use_compression = Boolean(parsed.transport.useCompression)
-    }
-  } catch (e) {
-    console.warn('Failed to parse advanced config:', e)
-  }
 }
 
 function saveServices() {

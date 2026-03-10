@@ -12,6 +12,14 @@ export function toSerializableServer(server: Server) {
 }
 
 export function toSerializableService(service: Service) {
+	if (service.is_advanced) {
+		return {
+			id: service.id,
+			name: service.name,
+			is_advanced: service.is_advanced,
+			advanced_config: service.advanced_config,
+		}
+	}
 	return {
 		id: service.id,
 		name: service.name,
@@ -21,8 +29,6 @@ export function toSerializableService(service: Service) {
 		remote_port: service.remote_port,
 		use_encryption: service.use_encryption,
 		use_compression: service.use_compression,
-		advanced_config: service.advanced_config,
-		is_advanced: service.is_advanced,
 	}
 }
 
