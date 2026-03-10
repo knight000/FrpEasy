@@ -237,12 +237,14 @@ useSnackbar(): { snackbar, showSnackbar, showSuccess, showError, showInfo, showW
 
 - `frontend/src/helpers/modelConverters.ts` - Wails model conversion utilities
 - `frontend/src/helpers/serializers.ts` - Data serialization utilities
+- `frontend/src/helpers/serviceParser.ts` - Service config parsing (FRPEASY prefix, TOML)
 - `frontend/src/composables/useStatus.ts` - Status mapping composable
 - `frontend/src/composables/useSnackbar.ts` - Snackbar utilities
 - `frontend/src/composables/useDownloadSource.ts` - Download source configuration
 - `frontend/src/components/ConfirmDialog.vue` - Generic confirmation dialog component
 - `frontend/src/components/DownloadSourceSelect.vue` - Download source selector component
 - `internal/config/config.go` - Added conversion functions between config and models
+- `internal/frpc/template_parser.go` - frp Go template parsing (port range)
 
 ## Completed Optimizations
 
@@ -261,3 +263,32 @@ useSnackbar(): { snackbar, showSnackbar, showSuccess, showError, showInfo, showW
 - [x] Extracted ConfirmDialog component for reusable confirmation dialogs
 - [x] Created DownloadSourceSelect component and useDownloadSource composable
 - [x] Moved ImportResult to models package
+- [x] Support Go template port range mapping (parseNumberRangePair)
+
+## Go Template Support
+
+FrpEasy now supports frp's Go template syntax for port range mapping:
+
+### Example Configuration
+```toml
+{{- range $_, $v := parseNumberRangePair "6000-6006,6007" "6000-6006,6007" }}
+[[proxies]]
+name = "tcp-{{ $v.First }}"
+type = "tcp"
+localPort = {{ $v.First }}
+remotePort = {{ $v.Second }}
+{{- end }}
+```
+
+### Implementation Details
+- **Import**: Go template configs are detected and parsed as advanced services
+- **Display**: Name shows as `tcp-*`, port shows as `6000-6007` (range format)
+- **Export**: Template configs are exported without FRPEASY metadata prefix
+- **Internal Format**: `#FRPEASY#name=tcp-*#protocol=TCP#ports=6000-6007\n` + original content
+
+### Files Modified
+- `internal/frpc/template_parser.go` - Copied frp's ParseRangeNumbers and ParseNumberRangePair
+- `internal/frpc/parser.go` - Detect and parse Go template blocks
+- `internal/frpc/config.go` - Strip FRPEASY prefix on export
+- `frontend/src/helpers/serviceParser.ts` - Parse FRPEASY prefix for display
+- `frontend/src/App.vue` - Display port range,- `frontend/src/stores/preset.ts` - Added `_portRange` field to Service

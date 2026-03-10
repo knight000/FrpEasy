@@ -140,7 +140,7 @@
                             </v-chip>
                           </td>
                           <td>{{ service.local_ip }}:{{ service.local_port }}</td>
-                          <td>{{ service.remote_port }}</td>
+                          <td>{{ displayPort(service) }}</td>
                           <td>
                             <v-icon :color="service.use_encryption ? 'success' : 'grey'" size="small">
                               {{ service.use_encryption ? 'mdi-check-circle' : 'mdi-close-circle' }}
@@ -409,7 +409,7 @@
                       {{ service.protocol }}
                     </v-chip>
                     <span class="text-grey text-caption ml-2">
-                      {{ service.local_ip }}:{{ service.local_port }} → {{ service.remote_port }}
+                      {{ service.local_ip }}:{{ service.local_port }} → {{ displayPort(service) }}
                     </span>
                     <v-spacer />
                     <v-btn
@@ -888,7 +888,20 @@ watch(
 )
 
 function getProtocolColor(protocol: Service['protocol']) {
-  return { TCP: 'primary', UDP: 'success', HTTP: 'warning', HTTPS: 'info' }[protocol] || 'grey'
+  const colors: Record<string, string> = {
+    TCP: 'primary',
+    UDP: 'success',
+    HTTP: 'warning',
+    HTTPS: 'info',
+  }
+  return colors[protocol] || 'grey'
+}
+
+function displayPort(service: Service): string {
+  if (service._portRange) {
+    return service._portRange
+  }
+  return String(service.remote_port)
 }
 
 function formatUptime(seconds: number): string {
@@ -1071,6 +1084,7 @@ function addService() {
 
 function generateDefaultAdvancedConfig(service: Service) {
   const lines: string[] = []
+  lines.push('[[proxies]]')
   lines.push(`name = "${service.name}"`)
   lines.push(`type = "${service.protocol.toLowerCase()}"`)
   lines.push(`localIP = "${service.local_ip}"`)

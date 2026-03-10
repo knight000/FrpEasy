@@ -161,7 +161,76 @@ func extractProxyToml(proxy map[string]interface{}) (string, bool) {
 	return sb.String(), hasAdvanced
 }
 
+func parseTomlWithGoTemplate(content []byte) (*FrpConfig, error) {
+	config := &FrpConfig{
+		ServerPort: 7000,
+	}
+
+	contentStr := string(content)
+
+	var raw map[string]interface{}
+	toml.Unmarshal(content, &raw)
+
+	if v, ok := raw["serverAddr"].(string); ok {
+		config.ServerAddr = v
+	}
+	if v, ok := raw["serverPort"].(int64); ok {
+		config.ServerPort = int(v)
+	}
+	if auth, ok := raw["auth"].(map[string]interface{}); ok {
+		if t, ok := auth["token"].(string); ok {
+			config.Token = t
+		}
+	}
+
+	templateBlocks := extractGoTemplateBlocks(contentStr)
+	for _, block := range templateBlocks {
+		displayInfo, err := ParseGoTemplateBlock(block)
+		if err != nil {
+			continue
+		}
+
+		frpeasyPrefix := fmt.Sprintf("#FRPEASY#name=%s#protocol=%s#ports=%s\n",
+			displayInfo.NamePattern,
+			displayInfo.Protocol,
+			displayInfo.RemotePorts)
+
+		proxyConfig := ProxyConfig{
+			Name:           displayInfo.NamePattern,
+			Type:           strings.ToLower(displayInfo.Protocol),
+			LocalIP:        "127.0.0.1",
+			AdvancedConfig: frpeasyPrefix + block,
+			IsAdvanced:     true,
+		}
+
+		config.Proxies = append(config.Proxies, proxyConfig)
+	}
+
+	return config, nil
+}
+
+func extractGoTemplateBlocks(content string) []string {
+	var blocks []string
+
+	re := regexp.MustCompile(`(?s)(\{\{-?\s*range[^}]+\}\}(?:.+?)\{\{-?\s*end\s*\}\})`)
+	matches := re.FindAllString(content, -1)
+
+	for _, match := range matches {
+		if strings.Contains(match, "[[proxies]]") {
+			blocks = append(blocks, match)
+		}
+	}
+
+	return blocks
+}
+
 func ParseTomlContent(content []byte) (*FrpConfig, error) {
+	contentStr := string(content)
+
+	if ContainsGoTemplate(contentStr) {
+		return parseTomlWithGoTemplate(content)
+	}
+
 	var raw map[string]interface{}
 	if err := toml.Unmarshal(content, &raw); err != nil {
 		return nil, fmt.Errorf("failed to parse TOML: %w", err)
