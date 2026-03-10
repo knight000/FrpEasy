@@ -110,56 +110,40 @@ func getMapMapCI(m map[string]interface{}, key string) map[string]interface{} {
 	return nil
 }
 
-func extractProxyToml(proxy map[string]interface{}) (string, bool) {
-	var sb strings.Builder
-	hasAdvanced := false
-
+func hasAdvancedFields(proxy map[string]interface{}) bool {
 	for key, value := range proxy {
 		if strings.EqualFold(key, "transport") {
 			if transport, ok := value.(map[string]interface{}); ok {
-				for tkey, tvalue := range transport {
+				for tkey := range transport {
 					fullKey := "transport." + tkey
-					if isBasicProxyField(fullKey) {
-						if b, ok := tvalue.(bool); ok && b {
-							sb.WriteString(fmt.Sprintf("%s = true\n", fullKey))
-						}
-					} else {
-						hasAdvanced = true
-						switch v := tvalue.(type) {
-						case string:
-							sb.WriteString(fmt.Sprintf("%s = \"%s\"\n", fullKey, v))
-						case int64:
-							sb.WriteString(fmt.Sprintf("%s = %d\n", fullKey, v))
-						case float64:
-							sb.WriteString(fmt.Sprintf("%s = %v\n", fullKey, v))
-						case bool:
-							sb.WriteString(fmt.Sprintf("%s = %v\n", fullKey, v))
-						default:
-							data, _ := toml.Marshal(map[string]interface{}{tkey: v})
-							sb.WriteString(string(data))
-						}
+					if !isBasicProxyField(fullKey) {
+						return true
 					}
 				}
 			}
 		} else if !isBasicProxyField(key) {
-			hasAdvanced = true
-			switch v := value.(type) {
-			case string:
-				sb.WriteString(fmt.Sprintf("%s = \"%s\"\n", key, v))
-			case int64:
-				sb.WriteString(fmt.Sprintf("%s = %d\n", key, v))
-			case float64:
-				sb.WriteString(fmt.Sprintf("%s = %v\n", key, v))
-			case bool:
-				sb.WriteString(fmt.Sprintf("%s = %v\n", key, v))
-			default:
-				data, _ := toml.Marshal(map[string]interface{}{key: v})
-				sb.WriteString(string(data))
-			}
+			return true
 		}
 	}
+	return false
+}
 
-	return sb.String(), hasAdvanced
+func extractProxyToml(proxy map[string]interface{}) (string, bool) {
+	if !hasAdvancedFields(proxy) {
+		return "", false
+	}
+
+	proxyCopy := make(map[string]interface{})
+	for k, v := range proxy {
+		proxyCopy[k] = v
+	}
+
+	data, err := toml.Marshal(map[string]interface{}{"proxies": []interface{}{proxyCopy}})
+	if err != nil {
+		return "", false
+	}
+
+	return string(data), true
 }
 
 func parseTomlWithGoTemplate(content []byte) (*FrpConfig, error) {
