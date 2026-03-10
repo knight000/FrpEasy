@@ -368,7 +368,7 @@
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="servicesDialog" max-width="1000">
+    <v-dialog v-model="servicesDialog" max-width="900">
       <v-card>
         <v-card-title class="d-flex align-center">
           编辑服务规则
@@ -1184,5 +1184,11 @@ html, body, .v-application {
 }
 .services-table .v-select__selection {
   font-size: 13px;
+}
+.services-table td.text-center {
+  vertical-align: middle;
+}
+.services-table td.text-center .v-checkbox .v-selection-control {
+  justify-content: center;
 }
 </style>
