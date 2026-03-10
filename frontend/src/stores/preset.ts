@@ -526,6 +526,8 @@ export const usePresetStore = defineStore('preset', () => {
         remote_port: s.remote_port,
         use_encryption: s.use_encryption,
         use_compression: s.use_compression,
+        advanced_config: s.advanced_config,
+        is_advanced: s.is_advanced,
       })),
     }
     return TOML.stringify(tomlObj)
@@ -602,6 +604,8 @@ export const usePresetStore = defineStore('preset', () => {
           remote_port: s.remote_port,
           use_encryption: s.use_encryption ?? false,
           use_compression: s.use_compression ?? false,
+          advanced_config: s.advanced_config ?? '',
+          is_advanced: s.is_advanced ?? false,
         })),
       }
     } catch (e) {
