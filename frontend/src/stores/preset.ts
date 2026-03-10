@@ -688,10 +688,15 @@ export const usePresetStore = defineStore('preset', () => {
           service.name = result.NamePattern
           service.protocol = result.Protocol
           service.display_ports = result.RemotePorts
+          service.local_ip = '127.0.0.1'
+          service.local_port = 0
         }
       } catch (e) {
         console.warn('[ParseAdvancedConfig] Failed:', e)
       }
+    } else {
+      parseAdvancedConfigToBasic(service)
+      service.display_ports = ''
     }
   }
 

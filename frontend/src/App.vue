@@ -516,7 +516,7 @@
 
                   <template v-else>
                     <div class="text-caption text-grey mb-2">
-                      直接编辑 [[proxies]] 中的配置内容（不包含 [[proxies]] 标题）
+                      直接编辑配置内容
                     </div>
                     <v-textarea
                       v-model="service.advanced_config"
