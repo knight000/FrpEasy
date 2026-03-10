@@ -1,59 +1,65 @@
 import TOML from 'smol-toml'
 import type { Service } from '../stores/preset'
 
-export function parseAdvancedConfigToBasic(service: Service): void {
-  if (!service.is_advanced || !service.advanced_config) return
+export function parseAdvancedConfigToBasic(service: Service): boolean {
+  if (!service.advanced_config) return false
 
   if (service.advanced_config.includes('{{') && service.advanced_config.includes('}}')) {
-    if (!service.name || service.name === '') {
-      service.name = "模板服务"
-    }
-    return
+    return false
   }
 
   try {
     const parsed = TOML.parse(service.advanced_config) as any
 
+    if (!Array.isArray(parsed.proxies) || parsed.proxies.length === 0) {
+      return false
+    }
+
+    const proxy = parsed.proxies[0]
+
     service.protocol = 'TCP'
-    service.local_ip = ''
+    service.local_ip = '127.0.0.1'
     service.local_port = 0
     service.remote_port = 0
     service.use_encryption = false
     service.use_compression = false
 
-    if (parsed.name && typeof parsed.name === 'string') {
-      service.name = parsed.name
+    if (proxy.name && typeof proxy.name === 'string') {
+      service.name = proxy.name
     }
-    if (parsed.type && typeof parsed.type === 'string') {
+    if (proxy.type && typeof proxy.type === 'string') {
       const typeMap: Record<string, string> = {
         tcp: 'TCP',
         udp: 'UDP',
         http: 'HTTP',
         https: 'HTTPS',
       }
-      const lowerType = parsed.type.toLowerCase()
-      service.protocol = typeMap[lowerType] || parsed.type.toUpperCase()
+      const lowerType = proxy.type.toLowerCase()
+      service.protocol = typeMap[lowerType] || proxy.type.toUpperCase()
     }
-    if (parsed.localIP !== undefined) {
-      service.local_ip = String(parsed.localIP)
+    if (proxy.localIP !== undefined) {
+      service.local_ip = String(proxy.localIP)
     }
-    if (parsed.localIp !== undefined) {
-      service.local_ip = String(parsed.localIp)
+    if (proxy.localIp !== undefined) {
+      service.local_ip = String(proxy.localIp)
     }
-    if (parsed.localPort !== undefined) {
-      service.local_port = Number(parsed.localPort)
+    if (proxy.localPort !== undefined) {
+      service.local_port = Number(proxy.localPort)
     }
-    if (parsed.remotePort !== undefined) {
-      service.remote_port = Number(parsed.remotePort)
+    if (proxy.remotePort !== undefined) {
+      service.remote_port = Number(proxy.remotePort)
     }
-    if (parsed.transport?.useEncryption !== undefined) {
-      service.use_encryption = Boolean(parsed.transport.useEncryption)
+    if (proxy.transport?.useEncryption !== undefined) {
+      service.use_encryption = Boolean(proxy.transport.useEncryption)
     }
-    if (parsed.transport?.useCompression !== undefined) {
-      service.use_compression = Boolean(parsed.transport.useCompression)
+    if (proxy.transport?.useCompression !== undefined) {
+      service.use_compression = Boolean(proxy.transport.useCompression)
     }
+
+    return true
   } catch (e) {
     console.warn('Failed to parse advanced config:', e)
+    return false
   }
 }
 

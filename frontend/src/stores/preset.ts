@@ -680,7 +680,7 @@ export const usePresetStore = defineStore('preset', () => {
   }
 
   async function parseAdvancedConfigService(service: Service): Promise<void> {
-    if (!service.is_advanced || !service.advanced_config) return
+    if (!service.advanced_config) return
 
     if (service.advanced_config.includes('{{') && service.advanced_config.includes('}}')) {
       try {
@@ -697,7 +697,11 @@ export const usePresetStore = defineStore('preset', () => {
         console.warn('[ParseAdvancedConfig] Failed:', e)
       }
     } else {
-      parseAdvancedConfigToBasic(service)
+      const success = parseAdvancedConfigToBasic(service)
+      if (success) {
+        service.is_advanced = false
+        service.advanced_config = ''
+      }
       service.display_ports = ''
       service.display_local_ports = ''
     }
