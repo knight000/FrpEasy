@@ -59,11 +59,11 @@ export namespace models {
 	    id: string;
 	    name: string;
 	    protocol: string;
-	    localIp: string;
-	    localPort: number;
-	    remotePort: number;
-	    useEncryption: boolean;
-	    useCompression: boolean;
+	    local_ip: string;
+	    local_port: number;
+	    remote_port: number;
+	    use_encryption: boolean;
+	    use_compression: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Service(source);
@@ -74,11 +74,11 @@ export namespace models {
 	        this.id = source["id"];
 	        this.name = source["name"];
 	        this.protocol = source["protocol"];
-	        this.localIp = source["localIp"];
-	        this.localPort = source["localPort"];
-	        this.remotePort = source["remotePort"];
-	        this.useEncryption = source["useEncryption"];
-	        this.useCompression = source["useCompression"];
+	        this.local_ip = source["local_ip"];
+	        this.local_port = source["local_port"];
+	        this.remote_port = source["remote_port"];
+	        this.use_encryption = source["use_encryption"];
+	        this.use_compression = source["use_compression"];
 	    }
 	}
 	export class Server {
@@ -165,10 +165,10 @@ export namespace models {
 	}
 	
 	export class ServerRuntime {
-	    presetId: string;
-	    serverId: string;
-	    processPid: number;
-	    configPath: string;
+	    preset_id: string;
+	    server_id: string;
+	    process_pid: number;
+	    config_path: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ServerRuntime(source);
@@ -176,10 +176,10 @@ export namespace models {
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.presetId = source["presetId"];
-	        this.serverId = source["serverId"];
-	        this.processPid = source["processPid"];
-	        this.configPath = source["configPath"];
+	        this.preset_id = source["preset_id"];
+	        this.server_id = source["server_id"];
+	        this.process_pid = source["process_pid"];
+	        this.config_path = source["config_path"];
 	    }
 	}
 

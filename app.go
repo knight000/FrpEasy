@@ -107,9 +107,9 @@ func (a *App) DownloadFrpc(source string) {
 func (a *App) StartServer(presetID, serverID string, server models.Server, services []models.Service) error {
 	return a.manager.Start(presetID, serverID, &server, services, func(presetID, serverID string, log models.LogEntry) {
 		runtime.EventsEmit(a.ctx, "server:log", map[string]interface{}{
-			"presetId": presetID,
-			"serverId": serverID,
-			"log":      log,
+			"preset_id": presetID,
+			"server_id": serverID,
+			"log":       log,
 		})
 	})
 }
@@ -282,10 +282,10 @@ func sanitizeFilename(name string) string {
 	return re.ReplaceAllString(name, "_")
 }
 
-func (a *App) SaveAppConfig(jsonContent string) error {
-	appConfig, err := config.FromJSON(jsonContent)
+func (a *App) SaveAppConfig(tomlContent string) error {
+	appConfig, err := config.ParseConfigString(tomlContent)
 	if err != nil {
-		fmt.Println("Failed to parse config JSON:", err)
+		fmt.Println("Failed to parse config TOML:", err)
 		return fmt.Errorf("failed to parse config: %w", err)
 	}
 	fmt.Println("Saving config, presets count:", len(appConfig.Presets))
@@ -298,7 +298,11 @@ func (a *App) LoadAppConfig() string {
 		fmt.Println("Failed to load config:", err)
 		return ""
 	}
-	jsonStr := config.ToJSON(appConfig)
+	tomlStr, err := config.ToTomlString(appConfig)
+	if err != nil {
+		fmt.Println("Failed to marshal config:", err)
+		return ""
+	}
 	fmt.Println("Loaded config, presets count:", len(appConfig.Presets))
-	return jsonStr
+	return tomlStr
 }

@@ -41,11 +41,11 @@ export interface Service {
   id: string
   name: string
   protocol: string
-  localIp: string
-  localPort: number
-  remotePort: number
-  useEncryption: boolean
-  useCompression: boolean
+  local_ip: string
+  local_port: number
+  remote_port: number
+  use_encryption: boolean
+  use_compression: boolean
 }
 
 export interface Preset {
@@ -56,12 +56,12 @@ export interface Preset {
 }
 
 export interface DownloadProgress {
-  totalBytes: number
+  total_bytes: number
   downloaded: number
   percentage: number
-  isComplete: boolean
-  isError: boolean
-  errorMessage: string
+  is_complete: boolean
+  is_error: boolean
+  error_message: string
 }
 
 export type DownloadSource = 'github' | 'ghproxy' | 'fastgit' | 'moeyy'
@@ -96,7 +96,7 @@ const loadFromStorage = async (): Promise<Preset[]> => {
     const stored = await LoadAppConfig()
     console.log('[LoadFromStorage] LoadAppConfig returned:', stored ? 'data' : 'empty')
     if (stored) {
-      const parsed = JSON.parse(stored)
+      const parsed = TOML.parse(stored) as any
       console.log('[LoadFromStorage] Parsed presets count:', parsed.presets?.length || 0)
       if (parsed.presets && Array.isArray(parsed.presets)) {
         return parsed.presets.map((p: Preset) => ({
@@ -134,14 +134,14 @@ async function saveToStorage(presets: Preset[]) {
         id: s.id,
         name: s.name,
         protocol: s.protocol,
-        localIp: s.localIp,
-        localPort: s.localPort,
-        remotePort: s.remotePort,
-        useEncryption: s.useEncryption,
-        useCompression: s.useCompression,
+        local_ip: s.local_ip,
+        local_port: s.local_port,
+        remote_port: s.remote_port,
+        use_encryption: s.use_encryption,
+        use_compression: s.use_compression,
       })),
     }))
-    await SaveAppConfig(JSON.stringify({ presets: toSave }))
+    await SaveAppConfig(TOML.stringify({ presets: toSave }))
   } catch (e) {
     console.error('Failed to save presets to storage:', e)
   }
@@ -212,15 +212,15 @@ export const usePresetStore = defineStore('preset', () => {
     EventsOn('download:progress', (progress: DownloadProgress) => {
       downloadProgress.value = progress
       console.log('[DownloadFrpc] Progress:', progress.percentage.toFixed(1) + '%')
-      if (progress.isComplete || progress.isError) {
+      if (progress.is_complete || progress.is_error) {
         isDownloading.value = false
-        if (progress.isComplete) {
+        if (progress.is_complete) {
           console.log('[DownloadFrpc] Download completed')
           frpcDownloaded.value = true
           initFrpc()
         }
-        if (progress.isError) {
-          console.error('[DownloadFrpc] Download failed:', progress.errorMessage)
+        if (progress.is_error) {
+          console.error('[DownloadFrpc] Download failed:', progress.error_message)
         }
       }
     })
@@ -234,11 +234,11 @@ export const usePresetStore = defineStore('preset', () => {
   }
 
   function setupLogListener() {
-    EventsOn('server:log', (data: { presetId: string; serverId: string; log: LogEntry }) => {
+    EventsOn('server:log', (data: { preset_id: string; server_id: string; log: LogEntry }) => {
       console.log('[ServerLog]', data.log.message)
-      const preset = presets.value.find((p) => p.id === data.presetId)
+      const preset = presets.value.find((p) => p.id === data.preset_id)
       if (!preset) return
-      const server = preset.servers.find((s) => s.id === data.serverId)
+      const server = preset.servers.find((s) => s.id === data.server_id)
       if (!server) return
 
       server.logs.push(data.log)
@@ -315,11 +315,11 @@ export const usePresetStore = defineStore('preset', () => {
           id: s.id,
           name: s.name,
           protocol: s.protocol,
-          localIp: s.localIp,
-          localPort: s.localPort,
-          remotePort: s.remotePort,
-          useEncryption: s.useEncryption,
-          useCompression: s.useCompression,
+          local_ip: s.local_ip,
+          local_port: s.local_port,
+          remote_port: s.remote_port,
+          use_encryption: s.use_encryption,
+          use_compression: s.use_compression,
         }))
         console.log('[ToggleServer] Calling StartServer with services:', servicesModels.length)
         await StartServer(presetId, serverId, serverModel, servicesModels)
@@ -419,11 +419,11 @@ export const usePresetStore = defineStore('preset', () => {
       services: preset.services.map((s) => ({
         name: s.name,
         protocol: s.protocol,
-        localIp: s.localIp,
-        localPort: s.localPort,
-        remotePort: s.remotePort,
-        useEncryption: s.useEncryption,
-        useCompression: s.useCompression,
+        local_ip: s.local_ip,
+        local_port: s.local_port,
+        remote_port: s.remote_port,
+        use_encryption: s.use_encryption,
+        use_compression: s.use_compression,
       })),
     }
     localStorage.setItem(CLIPBOARD_KEY, JSON.stringify(clipboardData))
@@ -535,11 +535,11 @@ export const usePresetStore = defineStore('preset', () => {
       services: preset.services.map((s) => ({
         name: s.name,
         protocol: s.protocol,
-        local_ip: s.localIp,
-        local_port: s.localPort,
-        remote_port: s.remotePort,
-        use_encryption: s.useEncryption,
-        use_compression: s.useCompression,
+        local_ip: s.local_ip,
+        local_port: s.local_port,
+        remote_port: s.remote_port,
+        use_encryption: s.use_encryption,
+        use_compression: s.use_compression,
       })),
     }
     return TOML.stringify(tomlObj)
@@ -622,11 +622,11 @@ export const usePresetStore = defineStore('preset', () => {
           id: generateId(),
           name: s.name,
           protocol: s.protocol,
-          localIp: s.local_ip,
-          localPort: s.local_port,
-          remotePort: s.remote_port,
-          useEncryption: s.use_encryption ?? false,
-          useCompression: s.use_compression ?? false,
+          local_ip: s.local_ip,
+          local_port: s.local_port,
+          remote_port: s.remote_port,
+          use_encryption: s.use_encryption ?? false,
+          use_compression: s.use_compression ?? false,
         })),
       }
     } catch (e) {
@@ -650,11 +650,11 @@ export const usePresetStore = defineStore('preset', () => {
       const servicesJson = JSON.stringify(preset.services.map(s => ({
         name: s.name,
         protocol: s.protocol,
-        local_ip: s.localIp,
-        local_port: s.localPort,
-        remote_port: s.remotePort,
-        use_encryption: s.useEncryption,
-        use_compression: s.useCompression,
+        local_ip: s.local_ip,
+        local_port: s.local_port,
+        remote_port: s.remote_port,
+        use_encryption: s.use_encryption,
+        use_compression: s.use_compression,
       })))
 
       return await ExportPresetAsTomlBatch(serversJson, servicesJson, preset.name)
@@ -705,7 +705,7 @@ export const usePresetStore = defineStore('preset', () => {
       }
 
       for (const service of preset.services) {
-        const serviceKey = `${service.protocol}-${service.localIp}-${service.localPort}-${service.remotePort}`
+        const serviceKey = `${service.protocol}-${service.local_ip}-${service.local_port}-${service.remote_port}`
         
         if (serviceKeySet.has(serviceKey)) {
           console.log('[MergePresets] Skipping duplicate service:', service.name, serviceKey)
@@ -760,11 +760,11 @@ export const usePresetStore = defineStore('preset', () => {
               id: s.id,
               name: s.name,
               protocol: s.protocol,
-              localIp: s.localIp,
-              localPort: s.localPort,
-              remotePort: s.remotePort,
-              useEncryption: s.useEncryption,
-              useCompression: s.useCompression,
+              local_ip: s.local_ip,
+              local_port: s.local_port,
+              remote_port: s.remote_port,
+              use_encryption: s.use_encryption,
+              use_compression: s.use_compression,
             }))
             await StartServer(preset.id, server.id, serverModel, servicesModels)
             server.status = 'online'

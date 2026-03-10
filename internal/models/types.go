@@ -29,11 +29,11 @@ type Service struct {
 	ID             string          `json:"id"`
 	Name           string          `json:"name"`
 	Protocol       ServiceProtocol `json:"protocol"`
-	LocalIP        string          `json:"localIp"`
-	LocalPort      int             `json:"localPort"`
-	RemotePort     int             `json:"remotePort"`
-	UseEncryption  bool            `json:"useEncryption"`
-	UseCompression bool            `json:"useCompression"`
+	LocalIP        string          `json:"local_ip"`
+	LocalPort      int             `json:"local_port"`
+	RemotePort     int             `json:"remote_port"`
+	UseEncryption  bool            `json:"use_encryption"`
+	UseCompression bool            `json:"use_compression"`
 }
 
 type Server struct {
@@ -56,17 +56,17 @@ type Preset struct {
 }
 
 type DownloadProgress struct {
-	TotalBytes   int64   `json:"totalBytes"`
+	TotalBytes   int64   `json:"total_bytes"`
 	Downloaded   int64   `json:"downloaded"`
 	Percentage   float64 `json:"percentage"`
-	IsComplete   bool    `json:"isComplete"`
-	IsError      bool    `json:"isError"`
-	ErrorMessage string  `json:"errorMessage"`
+	IsComplete   bool    `json:"is_complete"`
+	IsError      bool    `json:"is_error"`
+	ErrorMessage string  `json:"error_message"`
 }
 
 type ServerRuntime struct {
-	PresetID   string `json:"presetId"`
-	ServerID   string `json:"serverId"`
-	ProcessPID int    `json:"processPid"`
-	ConfigPath string `json:"configPath"`
+	PresetID   string `json:"preset_id"`
+	ServerID   string `json:"server_id"`
+	ProcessPID int    `json:"process_pid"`
+	ConfigPath string `json:"config_path"`
 }

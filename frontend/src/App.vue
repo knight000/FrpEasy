@@ -126,16 +126,16 @@
                               {{ service.protocol }}
                             </v-chip>
                           </td>
-                          <td>{{ service.localIp }}:{{ service.localPort }}</td>
-                          <td>{{ service.remotePort }}</td>
+                          <td>{{ service.local_ip }}:{{ service.local_port }}</td>
+                          <td>{{ service.remote_port }}</td>
                           <td>
-                            <v-icon :color="service.useEncryption ? 'success' : 'grey'" size="small">
-                              {{ service.useEncryption ? 'mdi-check-circle' : 'mdi-close-circle' }}
+                            <v-icon :color="service.use_encryption ? 'success' : 'grey'" size="small">
+                              {{ service.use_encryption ? 'mdi-check-circle' : 'mdi-close-circle' }}
                             </v-icon>
                           </td>
                           <td>
-                            <v-icon :color="service.useCompression ? 'success' : 'grey'" size="small">
-                              {{ service.useCompression ? 'mdi-check-circle' : 'mdi-close-circle' }}
+                            <v-icon :color="service.use_compression ? 'success' : 'grey'" size="small">
+                              {{ service.use_compression ? 'mdi-check-circle' : 'mdi-close-circle' }}
                             </v-icon>
                           </td>
                         </tr>
@@ -408,11 +408,11 @@
                 <tr v-for="(service, i) in editingServices" :key="i">
                   <td><v-text-field v-model="service.name" density="compact" hide-details variant="outlined" /></td>
                   <td><v-select v-model="service.protocol" :items="['TCP', 'UDP', 'HTTP', 'HTTPS']" density="compact" hide-details variant="outlined" /></td>
-                  <td><v-text-field v-model="service.localIp" density="compact" hide-details variant="outlined" /></td>
-                  <td><v-text-field v-model.number="service.localPort" density="compact" hide-details type="number" variant="outlined" /></td>
-                  <td><v-text-field v-model.number="service.remotePort" density="compact" hide-details type="number" variant="outlined" /></td>
-                  <td class="text-center"><v-checkbox v-model="service.useEncryption" density="compact" hide-details color="primary" /></td>
-                  <td class="text-center"><v-checkbox v-model="service.useCompression" density="compact" hide-details color="primary" /></td>
+                  <td><v-text-field v-model="service.local_ip" density="compact" hide-details variant="outlined" /></td>
+                  <td><v-text-field v-model.number="service.local_port" density="compact" hide-details type="number" variant="outlined" /></td>
+                  <td><v-text-field v-model.number="service.remote_port" density="compact" hide-details type="number" variant="outlined" /></td>
+                  <td class="text-center"><v-checkbox v-model="service.use_encryption" density="compact" hide-details color="primary" /></td>
+                  <td class="text-center"><v-checkbox v-model="service.use_compression" density="compact" hide-details color="primary" /></td>
                   <td class="text-center"><v-btn icon="mdi-delete" size="small" variant="text" color="error" @click="editingServices.splice(i, 1)" /></td>
                 </tr>
               </tbody>
@@ -458,15 +458,15 @@
             </div>
             <div class="text-center text-grey">
               正在下载 frpc {{ store.downloadProgress?.downloaded ? Math.round(store.downloadProgress.downloaded / 1024 / 1024 * 100) / 100 : 0 }} MB / 
-              {{ store.downloadProgress?.totalBytes ? Math.round(store.downloadProgress.totalBytes / 1024 / 1024 * 100) / 100 : 0 }} MB
+              {{ store.downloadProgress?.total_bytes ? Math.round(store.downloadProgress.total_bytes / 1024 / 1024 * 100) / 100 : 0 }} MB
             </div>
             <div class="text-center text-caption text-grey mt-2">
               下载源: {{ getSourceLabel(downloadSource) }}
             </div>
           </template>
-          <template v-else-if="store.downloadProgress?.isError">
+          <template v-else-if="store.downloadProgress?.is_error">
             <v-alert type="error" variant="tonal" class="mb-4">
-              {{ store.downloadProgress?.errorMessage || '下载失败' }}
+              {{ store.downloadProgress?.error_message || '下载失败' }}
             </v-alert>
             <div class="mb-4">
               <div class="text-subtitle-2 mb-2">切换下载源:</div>
@@ -511,7 +511,7 @@
             取消
           </v-btn>
           <v-btn
-            v-if="store.downloadProgress?.isError"
+            v-if="store.downloadProgress?.is_error"
             color="primary"
             variant="flat"
             @click="startDownload"
@@ -876,11 +876,11 @@ function addService() {
     id: Math.random().toString(36).substring(2, 9),
     name: `服务 ${editingServices.value.length + 1}`,
     protocol: 'TCP',
-    localPort: 8080,
-    remotePort: 9000,
-    localIp: '127.0.0.1',
-    useEncryption: false,
-    useCompression: false
+    local_port: 8080,
+    remote_port: 9000,
+    local_ip: '127.0.0.1',
+    use_encryption: false,
+    use_compression: false
   })
 }
 

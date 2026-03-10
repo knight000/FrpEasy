@@ -1,0 +1,23 @@
+# Build output
+build/bin/
+
+# Frontend build
+frontend/dist/
+
+# Dependencies
+frontend/node_modules/
+
+# Temp files
+*.exe~
+*.tmp
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
