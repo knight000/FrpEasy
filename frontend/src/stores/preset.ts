@@ -518,17 +518,24 @@ export const usePresetStore = defineStore('preset', () => {
         port: s.port,
         token: s.token,
       })),
-      services: preset.services.map((s) => ({
-        name: s.name,
-        protocol: s.protocol,
-        local_ip: s.local_ip,
-        local_port: s.local_port,
-        remote_port: s.remote_port,
-        use_encryption: s.use_encryption,
-        use_compression: s.use_compression,
-        advanced_config: s.advanced_config,
-        is_advanced: s.is_advanced,
-      })),
+      services: preset.services.map((s) => {
+        if (s.is_advanced) {
+          return {
+            name: s.name,
+            is_advanced: s.is_advanced,
+            advanced_config: s.advanced_config,
+          }
+        }
+        return {
+          name: s.name,
+          protocol: s.protocol,
+          local_ip: s.local_ip,
+          local_port: s.local_port,
+          remote_port: s.remote_port,
+          use_encryption: s.use_encryption,
+          use_compression: s.use_compression,
+        }
+      }),
     }
     return TOML.stringify(tomlObj)
   }
@@ -595,18 +602,34 @@ export const usePresetStore = defineStore('preset', () => {
           logs: [],
           uptime: 0,
         })),
-        services: (data.services || []).map((s: any) => ({
-          id: generateId(),
-          name: s.name,
-          protocol: s.protocol,
-          local_ip: s.local_ip,
-          local_port: s.local_port,
-          remote_port: s.remote_port,
-          use_encryption: s.use_encryption ?? false,
-          use_compression: s.use_compression ?? false,
-          advanced_config: s.advanced_config ?? '',
-          is_advanced: s.is_advanced ?? false,
-        })),
+        services: (data.services || []).map((s: any) => {
+          if (s.is_advanced) {
+            return {
+              id: generateId(),
+              name: s.name,
+              protocol: 'TCP' as const,
+              local_ip: '127.0.0.1',
+              local_port: 0,
+              remote_port: 0,
+              use_encryption: false,
+              use_compression: false,
+              advanced_config: s.advanced_config ?? '',
+              is_advanced: true,
+            }
+          }
+          return {
+            id: generateId(),
+            name: s.name,
+            protocol: s.protocol,
+            local_ip: s.local_ip,
+            local_port: s.local_port,
+            remote_port: s.remote_port,
+            use_encryption: s.use_encryption ?? false,
+            use_compression: s.use_compression ?? false,
+            advanced_config: '',
+            is_advanced: false,
+          }
+        }),
       }
     } catch (e) {
       console.error('[ImportPresetToml] Failed:', e)
