@@ -86,10 +86,6 @@ func (a *App) DownloadFrpc(source string, useDefault bool) {
 		switch source {
 		case "github":
 			downloadSource = frpc.SourceGithub
-		case "fastgit":
-			downloadSource = frpc.SourceFastGit
-		case "moeyy":
-			downloadSource = frpc.SourceMoeyy
 		default:
 			downloadSource = frpc.SourceGHProxy
 		}

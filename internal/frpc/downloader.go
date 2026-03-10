@@ -24,8 +24,6 @@ type DownloadSource string
 const (
 	SourceGithub  DownloadSource = "github"
 	SourceGHProxy DownloadSource = "ghproxy"
-	SourceFastGit DownloadSource = "fastgit"
-	SourceMoeyy   DownloadSource = "moeyy"
 )
 
 func GetDownloadURL(source DownloadSource, version string) string {
@@ -40,10 +38,6 @@ func GetDownloadURL(source DownloadSource, version string) string {
 	switch source {
 	case SourceGHProxy:
 		return "https://ghproxy.net/" + githubURL
-	case SourceFastGit:
-		return "https://hub.fastgit.xyz/fatedier/frp/releases/download/v" + version + "/" + filename + ext
-	case SourceMoeyy:
-		return "https://github.moeyy.xyz/" + githubURL
 	default:
 		return githubURL
 	}

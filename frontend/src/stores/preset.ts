@@ -70,7 +70,7 @@ export interface DownloadProgress {
   version_fetch_error?: string
 }
 
-export type DownloadSource = 'github' | 'ghproxy' | 'fastgit' | 'moeyy'
+export type DownloadSource = 'github' | 'ghproxy'
 
 const CLIPBOARD_KEY = 'frpeasy_clipboard'
 

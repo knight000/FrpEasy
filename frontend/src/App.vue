@@ -716,11 +716,9 @@ const servicesDialog = ref(false)
 const deleteDialog = ref(false)
 const deletePresetDialog = ref(false)
 const downloadDialog = ref(false)
-const downloadSource = ref<'github' | 'ghproxy' | 'fastgit' | 'moeyy'>('ghproxy')
+const downloadSource = ref<'github' | 'ghproxy'>('ghproxy')
 const downloadSources = [
   { value: 'ghproxy', label: 'GHProxy (国内加速)' },
-  { value: 'moeyy', label: 'Moeyy (国内加速)' },
-  { value: 'fastgit', label: 'FastGit (国内加速)' },
   { value: 'github', label: 'GitHub (直连)' },
 ]
 
