@@ -378,8 +378,13 @@ func (a *App) NormalizeService(input models.ServiceInput) models.Service {
 				service.RemotePort = proxy.RemotePort
 				service.UseEncryption = proxy.UseEncryption
 				service.UseCompression = proxy.UseCompression
-				service.IsAdvanced = false
-				service.AdvancedConfig = ""
+
+				if frpc.HasAdvancedFieldsInConfig(input.AdvancedConfig) {
+					service.IsAdvanced = true
+				} else {
+					service.IsAdvanced = false
+					service.AdvancedConfig = ""
+				}
 			}
 		}
 	}

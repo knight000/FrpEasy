@@ -128,6 +128,25 @@ func hasAdvancedFields(proxy map[string]interface{}) bool {
 	return false
 }
 
+func HasAdvancedFieldsInConfig(advancedConfig string) bool {
+	var raw map[string]interface{}
+	if err := toml.Unmarshal([]byte(advancedConfig), &raw); err != nil {
+		return false
+	}
+
+	proxies, ok := raw["proxies"].([]interface{})
+	if !ok || len(proxies) == 0 {
+		return false
+	}
+
+	proxy, ok := proxies[0].(map[string]interface{})
+	if !ok {
+		return false
+	}
+
+	return hasAdvancedFields(proxy)
+}
+
 func extractProxyToml(proxy map[string]interface{}) (string, bool) {
 	if !hasAdvancedFields(proxy) {
 		return "", false
