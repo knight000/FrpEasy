@@ -1,53 +1,13 @@
 import TOML from 'smol-toml'
 import type { Service } from '../stores/preset'
 
-const FRPEASY_PREFIX = "#FRPEASY#"
-
-interface TemplateDisplayInfo {
-	namePattern?: string
-	protocol?: string
-	portRange?: string
-}
-
-function parseFrpeasyPrefix(config: string): TemplateDisplayInfo | null {
-	const firstLine = config.split('\n')[0]
-	if (!firstLine.startsWith(FRPEASY_PREFIX)) {
-	 return null
-	}
-
-	const data = firstLine.substring(FRPEASY_PREFIX.length)
-	const parts = data.split('#')
-	const info: TemplateDisplayInfo = {}
-
-	for (const part of parts) {
-		const [key, value] = part.split('=')
-	 if (key === 'name') {
-      info.namePattern = value
-    } else if (key === 'protocol') {
-      info.protocol = value
-    } else if (key === 'ports') {
-      info.portRange = value
-    }
-  }
-
-  return info
-}
-
 export function parseAdvancedConfigToBasic(service: Service): void {
   if (!service.is_advanced || !service.advanced_config) return
 
-  if (service.advanced_config.startsWith(FRPEASY_PREFIX)) {
-    const info = parseFrpeasyPrefix(service.advanced_config)
-    if (info) {
-      if (info.namePattern) service.name = info.namePattern
-      if (info.protocol) service.protocol = info.protocol
-      if (info.portRange) service._portRange = info.portRange
-    }
-    return
-  }
-
   if (service.advanced_config.includes('{{') && service.advanced_config.includes('}}')) {
-    service.name = "模板服务"
+    if (!service.name || service.name === '') {
+      service.name = "模板服务"
+    }
     return
   }
 

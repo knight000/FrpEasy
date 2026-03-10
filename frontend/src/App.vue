@@ -898,8 +898,8 @@ function getProtocolColor(protocol: Service['protocol']) {
 }
 
 function displayPort(service: Service): string {
-  if (service._portRange) {
-    return service._portRange
+  if (service.display_ports) {
+    return service.display_ports
   }
   return String(service.remote_port)
 }

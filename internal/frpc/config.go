@@ -9,19 +9,6 @@ import (
 	"frpeasy/internal/models"
 )
 
-const frpeasyPrefix = "#FRPEASY#"
-
-func stripFrpeasyPrefix(config string) string {
-	if strings.HasPrefix(config, frpeasyPrefix) {
-		idx := strings.Index(config, "\n")
-		if idx != -1 {
-			return config[idx+1:]
-		}
-		return config[len(frpeasyPrefix):]
-	}
-	return config
-}
-
 func GenerateConfig(server *models.Server, services []models.Service) string {
 	var sb strings.Builder
 
@@ -39,10 +26,9 @@ func GenerateConfig(server *models.Server, services []models.Service) string {
 
 	for _, service := range services {
 		if service.IsAdvanced && service.AdvancedConfig != "" {
-			config := stripFrpeasyPrefix(service.AdvancedConfig)
 			sb.WriteString("\n")
-			sb.WriteString(config)
-			if !strings.HasSuffix(config, "\n") {
+			sb.WriteString(service.AdvancedConfig)
+			if !strings.HasSuffix(service.AdvancedConfig, "\n") {
 				sb.WriteString("\n")
 			}
 		} else {

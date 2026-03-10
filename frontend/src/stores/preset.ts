@@ -55,7 +55,7 @@ export interface Service {
   use_compression: boolean
   advanced_config?: string
   is_advanced?: boolean
-  _portRange?: string
+  display_ports?: string
 }
 
 export interface Preset {

@@ -267,7 +267,7 @@ useSnackbar(): { snackbar, showSnackbar, showSuccess, showError, showInfo, showW
 
 ## Go Template Support
 
-FrpEasy now supports frp's Go template syntax for port range mapping:
+FrpEasy supports frp's Go template syntax for port range mapping:
 
 ### Example Configuration
 ```toml
@@ -281,14 +281,15 @@ remotePort = {{ $v.Second }}
 ```
 
 ### Implementation Details
-- **Import**: Go template configs are detected and parsed as advanced services
-- **Display**: Name shows as `tcp-*`, port shows as `6000-6007` (range format)
-- **Export**: Template configs are exported without FRPEASY metadata prefix
-- **Internal Format**: `#FRPEASY#name=tcp-*#protocol=TCP#ports=6000-6007\n` + original content
+- **Import**: Backend parses Go template and extracts display information
+- **Display**: `display_ports` field shows "6000-6007" (range format)
+- **Export**: Template configs are exported as-is, no metadata prefix
+- **Storage**: `advanced_config` contains raw template, `display_ports` contains port range
 
 ### Files Modified
-- `internal/frpc/template_parser.go` - Copied frp's ParseRangeNumbers and ParseNumberRangePair
-- `internal/frpc/parser.go` - Detect and parse Go template blocks
-- `internal/frpc/config.go` - Strip FRPEASY prefix on export
-- `frontend/src/helpers/serviceParser.ts` - Parse FRPEASY prefix for display
-- `frontend/src/App.vue` - Display port range,- `frontend/src/stores/preset.ts` - Added `_portRange` field to Service
+- `internal/frpc/template_parser.go` - Parse Go template blocks
+- `internal/frpc/parser.go` - Extract display info (name pattern, protocol, ports)
+- `internal/models/types.go` - Added `DisplayPorts` field
+- `frontend/src/stores/preset.ts` - Added `display_ports` to Service interface
+- `frontend/src/App.vue` - `displayPort()` uses `display_ports` field
+- `frontend/src/helpers/serviceParser.ts` - Simplified (no prefix parsing)

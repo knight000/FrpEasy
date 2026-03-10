@@ -11,6 +11,7 @@ export namespace models {
 	    use_compression: boolean;
 	    advanced_config: string;
 	    is_advanced: boolean;
+	    display_ports?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Service(source);
@@ -28,6 +29,7 @@ export namespace models {
 	        this.use_compression = source["use_compression"];
 	        this.advanced_config = source["advanced_config"];
 	        this.is_advanced = source["is_advanced"];
+	        this.display_ports = source["display_ports"];
 	    }
 	}
 	export class LogEntry {

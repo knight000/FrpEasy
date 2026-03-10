@@ -34,6 +34,7 @@ type ProxyConfig struct {
 	UseCompression bool
 	AdvancedConfig string
 	IsAdvanced     bool
+	DisplayPorts   string
 }
 
 func ParseTomlFile(filePath string) (*FrpConfig, error) {
@@ -190,17 +191,13 @@ func parseTomlWithGoTemplate(content []byte) (*FrpConfig, error) {
 			continue
 		}
 
-		frpeasyPrefix := fmt.Sprintf("#FRPEASY#name=%s#protocol=%s#ports=%s\n",
-			displayInfo.NamePattern,
-			displayInfo.Protocol,
-			displayInfo.RemotePorts)
-
 		proxyConfig := ProxyConfig{
 			Name:           displayInfo.NamePattern,
 			Type:           strings.ToLower(displayInfo.Protocol),
 			LocalIP:        "127.0.0.1",
-			AdvancedConfig: frpeasyPrefix + block,
+			AdvancedConfig: block,
 			IsAdvanced:     true,
+			DisplayPorts:   displayInfo.RemotePorts,
 		}
 
 		config.Proxies = append(config.Proxies, proxyConfig)
@@ -519,6 +516,7 @@ func ConvertToModels(config *FrpConfig, presetName string) (*models.Preset, erro
 			UseCompression: useCompression,
 			AdvancedConfig: proxy.AdvancedConfig,
 			IsAdvanced:     proxy.IsAdvanced,
+			DisplayPorts:   proxy.DisplayPorts,
 		}
 		preset.Services = append(preset.Services, service)
 	}

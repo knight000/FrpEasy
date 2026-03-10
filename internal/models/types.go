@@ -36,6 +36,7 @@ type Service struct {
 	UseCompression bool            `json:"use_compression" toml:"use_compression"`
 	AdvancedConfig string          `json:"advanced_config" toml:"advanced_config"`
 	IsAdvanced     bool            `json:"is_advanced" toml:"is_advanced"`
+	DisplayPorts   string          `json:"display_ports,omitempty" toml:"display_ports,omitempty"`
 }
 
 type Server struct {
