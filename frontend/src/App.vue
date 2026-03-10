@@ -15,6 +15,7 @@
       @exportToml="handleExportToml"
       @mergePresets="openMergeDialog"
       @about="openAboutDialog"
+      @rename="handleRenamePreset"
     />
 
     <v-main class="bg-grey-lighten-4">
@@ -961,6 +962,11 @@ function doDeletePreset() {
     showSnackbar('预设已删除')
     presetToDelete.value = null
   }
+}
+
+function handleRenamePreset(id: string, name: string) {
+  store.updatePresetName(id, name)
+  showSnackbar('预设已重命名')
 }
 
 function handleToggleServer(presetId: string, serverId: string) {

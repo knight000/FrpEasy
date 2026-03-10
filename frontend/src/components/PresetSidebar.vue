@@ -155,6 +155,12 @@
           <v-list-item-title>粘贴</v-list-item-title>
         </v-list-item>
         <v-divider />
+        <v-list-item @click="doRename">
+          <template #prepend>
+            <v-icon>mdi-pencil</v-icon>
+          </template>
+          <v-list-item-title>重命名</v-list-item-title>
+        </v-list-item>
         <v-list-item @click="doExportTomlPreset">
           <template #prepend>
             <v-icon>mdi-export</v-icon>
@@ -176,6 +182,26 @@
         </v-list-item>
       </v-list>
     </v-menu>
+
+    <v-dialog v-model="renameDialog" max-width="400">
+      <v-card>
+        <v-card-title>重命名预设</v-card-title>
+        <v-card-text>
+          <v-text-field
+            v-model="renameName"
+            label="预设名称"
+            variant="outlined"
+            density="compact"
+            @keyup.enter="confirmRename"
+          />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="renameDialog = false">取消</v-btn>
+          <v-btn color="primary" variant="flat" @click="confirmRename">确定</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-navigation-drawer>
 </template>
 
@@ -203,11 +229,14 @@ const emit = defineEmits<{
   (e: 'exportToml', id: string): void
   (e: 'mergePresets'): void
   (e: 'about'): void
+  (e: 'rename', id: string, name: string): void
 }>()
 
 const store = usePresetStore()
 const hasClipboardData = ref(false)
 const fabOpen = ref(false)
+const renameDialog = ref(false)
+const renameName = ref('')
 
 const contextMenu = ref({
   show: false,
@@ -249,6 +278,20 @@ function doPaste() {
 function doDelete() {
   if (contextMenu.value.preset) {
     emit('delete', contextMenu.value.preset.id)
+  }
+}
+
+function doRename() {
+  if (contextMenu.value.preset) {
+    renameName.value = contextMenu.value.preset.name
+    renameDialog.value = true
+  }
+}
+
+function confirmRename() {
+  if (contextMenu.value.preset && renameName.value.trim()) {
+    emit('rename', contextMenu.value.preset.id, renameName.value.trim())
+    renameDialog.value = false
   }
 }
 
