@@ -202,17 +202,6 @@
                 </v-card>
               </v-col>
             </v-row>
-
-            <!-- 单服务器时显示控制台 -->
-            <div v-if="singleServer" class="mt-4">
-              <LogConsole
-                :logs="singleServer.logs"
-                :title="`${singleServer.name} - 控制台输出`"
-                :fullscreen="logFullscreen"
-                @clear="handleClearLogs(singleServer.id)"
-                @toggle-fullscreen="logFullscreen = !logFullscreen"
-              />
-            </div>
           </template>
 
           <!-- 服务器详情视图 -->
@@ -773,11 +762,6 @@ onUnmounted(() => {
 const currentServer = computed(() => {
   if (currentTab.value === 'home') return null
   return store.activePreset?.servers?.find((s) => s.id === currentTab.value) || null
-})
-
-const singleServer = computed(() => {
-  const servers = store.activePreset?.servers
-  return servers?.length === 1 ? servers[0] : null
 })
 
 const onlineCount = computed(() => {
