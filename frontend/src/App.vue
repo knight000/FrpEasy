@@ -24,7 +24,7 @@
           主页
         </v-tab>
         <v-tab v-for="server in store.activePreset?.servers || []" :key="server.id" :value="server.id">
-          <div :class="['status-dot-sm', getStatusColor(server.status)]" />
+          <div :class="['status-dot-sm', getStatusDotClass(server.status)]" />
           {{ server.name }}
         </v-tab>
         <v-btn icon="mdi-plus" variant="text" class="ml-2" @click="openAddServer" />
@@ -67,7 +67,7 @@
                           @click="currentTab = server.id"
                         >
                           <td>
-                            <div :class="['status-dot', getStatusColor(server.status)]" />
+                            <div :class="['status-dot', getStatusDotClass(server.status)]" />
                           </td>
                           <td>
                             <div class="font-weight-medium">{{ server.name }}</div>
@@ -845,8 +845,11 @@ import { usePresetStore, type Server, type Service } from '@/stores/preset'
 import PresetSidebar from '@/components/PresetSidebar.vue'
 import LogConsole from '@/components/LogConsole.vue'
 import TOML from 'smol-toml'
+import { getStatusDotClass, getStatusChipColor, getStatusText } from '@/composables/useStatus'
+import { useSnackbar } from '@/composables/useSnackbar'
 
 const store = usePresetStore()
+const { snackbar, showSnackbar } = useSnackbar()
 
 const currentTab = ref<string>('home')
 const createDialog = ref(false)
@@ -873,7 +876,6 @@ const isNewServer = ref(false)
 const editingServer = ref<{name: string, address: string, port: number, token: string} | null>(null)
 const editingServices = ref<Service[]>([])
 const expandedServicePanel = ref<number | number[] | null>(null)
-const snackbar = ref({ show: false, message: '', color: 'success' })
 
 const mergeDialog = ref(false)
 const mergedPresetName = ref('')
@@ -929,36 +931,6 @@ watch(
   }
 )
 
-function getStatusColor(status: Server['status']) {
-  const map: Record<Server['status'], string> = {
-    online: 'bg-success',
-    connecting: 'bg-warning',
-    error: 'bg-error',
-    offline: 'bg-grey'
-  }
-  return map[status] || 'bg-grey'
-}
-
-function getStatusChipColor(status: Server['status']) {
-  const map: Record<Server['status'], string> = {
-    online: 'success',
-    connecting: 'warning',
-    error: 'error',
-    offline: 'grey'
-  }
-  return map[status] || 'grey'
-}
-
-function getStatusText(status: Server['status']) {
-  const map: Record<Server['status'], string> = {
-    online: '在线',
-    connecting: '连接中',
-    error: '错误',
-    offline: '离线'
-  }
-  return map[status] || '离线'
-}
-
 function getProtocolColor(protocol: Service['protocol']) {
   return { TCP: 'primary', UDP: 'success', HTTP: 'warning', HTTPS: 'info' }[protocol] || 'grey'
 }
@@ -984,22 +956,18 @@ function createPreset() {
       : undefined
     store.addPreset(newName.value.trim(), sourcePreset)
     createDialog.value = false
-    snackbar.value = {
-      show: true,
-      message: sourcePreset ? '预设已复制创建' : '预设已创建',
-      color: 'success'
-    }
+    showSnackbar(sourcePreset ? '预设已复制创建' : '预设已创建')
   }
 }
 
 function handleCopyPreset(id: string) {
   store.copyPreset(id)
-  snackbar.value = { show: true, message: '预设已复制到剪贴板', color: 'success' }
+  showSnackbar('预设已复制到剪贴板')
 }
 
 function handlePastePreset() {
   if (store.pastePreset('新建预设 (副本)')) {
-    snackbar.value = { show: true, message: '预设已粘贴', color: 'success' }
+    showSnackbar('预设已粘贴')
   }
 }
 
@@ -1015,7 +983,7 @@ function doDeletePreset() {
   if (presetToDelete.value) {
     store.deletePreset(presetToDelete.value.id)
     deletePresetDialog.value = false
-    snackbar.value = { show: true, message: '预设已删除', color: 'success' }
+    showSnackbar('预设已删除')
     presetToDelete.value = null
   }
 }
@@ -1041,7 +1009,7 @@ function startDownload() {
 }
 
 function startDownloadWithDefault() {
-  store.startDownloadFrpcWithDefault(downloadSource.value)
+    store.startDownloadFrpc(downloadSource.value, true)
 }
 
 async function closeDownloadDialog() {
@@ -1064,7 +1032,7 @@ function startAllServers() {
   store.activePreset.servers.forEach((s) => {
     if (!s.enabled) store.toggleServer(store.activePreset!.id, s.id)
   })
-  snackbar.value = { show: true, message: '已启动全部服务器', color: 'success' }
+  showSnackbar('已启动全部服务器')
 }
 
 function stopAllServers() {
@@ -1072,7 +1040,7 @@ function stopAllServers() {
   store.activePreset.servers.forEach((s) => {
     if (s.enabled) store.toggleServer(store.activePreset!.id, s.id)
   })
-  snackbar.value = { show: true, message: '已停止全部服务器', color: 'success' }
+  showSnackbar('已停止全部服务器')
 }
 
 function openAddServer() {
@@ -1102,10 +1070,10 @@ function saveServer() {
   if (!store.activePreset || !editingServer.value) return
   if (isNewServer.value) {
     store.addServer(store.activePreset.id, editingServer.value)
-    snackbar.value = { show: true, message: '服务器已添加', color: 'success' }
+    showSnackbar('服务器已添加')
   } else if (currentServer.value) {
     store.updateServer(store.activePreset.id, currentServer.value.id, editingServer.value)
-    snackbar.value = { show: true, message: '配置已保存', color: 'success' }
+    showSnackbar('配置已保存')
   }
   serverDialog.value = false
 }
@@ -1119,7 +1087,7 @@ function doDeleteServer() {
   if (store.activePreset && serverToDelete.value) {
     store.deleteServer(store.activePreset.id, serverToDelete.value)
     currentTab.value = 'home'
-    snackbar.value = { show: true, message: '服务器已删除', color: 'success' }
+    showSnackbar('服务器已删除')
   }
   deleteDialog.value = false
   serverToDelete.value = null
@@ -1223,7 +1191,7 @@ function saveServices() {
   
   store.updatePreset(store.activePreset.id, { services: JSON.parse(JSON.stringify(editingServices.value)) })
   servicesDialog.value = false
-  snackbar.value = { show: true, message: '服务规则已保存', color: 'success' }
+  showSnackbar('服务规则已保存')
 }
 
 async function handleImportFrp() {
@@ -1242,13 +1210,13 @@ async function handleImportFrp() {
     }
 
     if (successCount > 0) {
-      snackbar.value = { show: true, message: `成功导入 ${successCount} 个预设`, color: 'success' }
+      showSnackbar(`成功导入 ${successCount} 个预设`)
     }
     if (errorMessages.length > 0) {
-      snackbar.value = { show: true, message: errorMessages[0], color: 'error' }
+      showSnackbar(errorMessages[0], 'error')
     }
   } catch (e) {
-    snackbar.value = { show: true, message: '导入失败', color: 'error' }
+    showSnackbar('导入失败', 'error')
   }
 }
 
@@ -1257,10 +1225,10 @@ async function handleImportToml() {
     const preset = await store.importPresetToml()
     if (preset) {
       store.addImportedPreset(preset)
-      snackbar.value = { show: true, message: '预设已导入', color: 'success' }
+      showSnackbar('预设已导入')
     }
   } catch (e) {
-    snackbar.value = { show: true, message: '导入失败', color: 'error' }
+    showSnackbar('导入失败', 'error')
   }
 }
 
@@ -1268,10 +1236,10 @@ async function handleExportTomlPreset(presetId: string) {
   try {
     const path = await store.exportPresetTomlPreset(presetId)
     if (path) {
-      snackbar.value = { show: true, message: '预设已导出', color: 'success' }
+      showSnackbar('预设已导出')
     }
   } catch (e) {
-    snackbar.value = { show: true, message: '导出失败', color: 'error' }
+    showSnackbar('导出失败', 'error')
   }
 }
 
@@ -1279,10 +1247,10 @@ async function handleExportToml(presetId: string) {
   try {
     const path = await store.exportPresetToml(presetId)
     if (path) {
-      snackbar.value = { show: true, message: 'frp 配置已导出到目录', color: 'success' }
+      showSnackbar('frp 配置已导出到目录')
     }
   } catch (e) {
-    snackbar.value = { show: true, message: '导出失败', color: 'error' }
+    showSnackbar('导出失败', 'error')
   }
 }
 
@@ -1308,13 +1276,9 @@ async function doMergePresets() {
   
   if (success) {
     mergeDialog.value = false
-    snackbar.value = { 
-      show: true, 
-      message: `已合并 ${selectedMergeIds.value.length} 个预设`, 
-      color: 'success' 
-    }
+    showSnackbar(`已合并 ${selectedMergeIds.value.length} 个预设`)
   } else {
-    snackbar.value = { show: true, message: '合并失败', color: 'error' }
+    showSnackbar('合并失败', 'error')
   }
 }
 
@@ -1332,14 +1296,14 @@ async function checkFrpcUpdate() {
     const compareResult = await store.compareFrpcVersions(latestFrpcVersion.value, currentFrpcVersion.value)
     hasFrpcUpdate.value = compareResult > 0
     if (hasFrpcUpdate.value) {
-      snackbar.value = { show: true, message: `发现新版本 frpc ${latestFrpcVersion.value}`, color: 'info' }
+      showSnackbar(`发现新版本 frpc ${latestFrpcVersion.value}`, 'info')
     } else if (latestFrpcVersion.value) {
-      snackbar.value = { show: true, message: 'frpc 已是最新版本', color: 'success' }
+      showSnackbar('frpc 已是最新版本')
     } else {
-      snackbar.value = { show: true, message: '无法获取版本信息', color: 'warning' }
+      showSnackbar('无法获取版本信息', 'warning')
     }
   } catch {
-    snackbar.value = { show: true, message: '检查更新失败', color: 'error' }
+    showSnackbar('检查更新失败', 'error')
   } finally {
     checkingFrpcUpdate.value = false
   }
@@ -1351,7 +1315,7 @@ function openDownloadFrpc() {
 }
 
 function checkAppUpdate() {
-  snackbar.value = { show: true, message: '此功能暂未开放，请关注 GitHub 发布页', color: 'info' }
+  showSnackbar('此功能暂未开放，请关注 GitHub 发布页', 'info')
 }
 </script>
 

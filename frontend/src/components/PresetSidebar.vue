@@ -56,7 +56,7 @@
           lines="one"
         >
           <template #prepend>
-            <div :class="['status-dot', getStatusColor(server.status)]" />
+            <div :class="['status-dot', getStatusDotClass(server.status)]" />
           </template>
           <v-list-item-title class="text-body-2">
             {{ server.name }}
@@ -183,6 +183,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import type { Preset, Server } from '@/stores/preset'
 import { usePresetStore } from '@/stores/preset'
+import { getStatusDotClass } from '@/composables/useStatus'
 
 defineProps<{
   presets: Preset[]
@@ -260,15 +261,6 @@ function doExportTomlPreset() {
 function doExportToml() {
   if (contextMenu.value.preset) {
     emit('exportToml', contextMenu.value.preset.id)
-  }
-}
-
-function getStatusColor(status: Server['status']) {
-  switch (status) {
-    case 'online': return 'bg-success'
-    case 'connecting': return 'bg-warning'
-    case 'error': return 'bg-error'
-    default: return 'bg-grey'
   }
 }
 

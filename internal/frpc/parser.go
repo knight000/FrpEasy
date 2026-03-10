@@ -57,16 +57,10 @@ var basicProxyFields = map[string]bool{
 }
 
 func isBasicProxyField(key string) bool {
-	if basic, ok := basicProxyFields[key]; ok && basic {
-		return true
+	if basic, ok := basicProxyFields[key]; ok {
+		return basic
 	}
-	if strings.HasPrefix(key, "transport.") {
-		suffix := key[10:]
-		if suffix == "useEncryption" || suffix == "useCompression" {
-			return true
-		}
-	}
-	return false
+	return key == "transport.useEncryption" || key == "transport.useCompression"
 }
 
 func extractProxyToml(proxy map[string]interface{}) (string, bool) {
@@ -131,9 +125,6 @@ func ParseTomlContent(content []byte) (*FrpConfig, error) {
 		ServerPort: 7000,
 	}
 
-	if v, ok := raw["serverAddr"].(string); ok {
-		config.ServerAddr = v
-	}
 	if v, ok := raw["serverAddr"].(string); ok {
 		config.ServerAddr = v
 	}

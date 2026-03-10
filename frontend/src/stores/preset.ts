@@ -21,6 +21,8 @@ import {
 } from '../../wailsjs/go/main/App'
 import { models } from '../../wailsjs/go/models'
 import TOML from 'smol-toml'
+import { createServerModel, createServiceModels } from '../helpers/modelConverters'
+import { toSerializableServer, toSerializableService } from '../helpers/serializers'
 
 export interface LogEntry {
   id: string
@@ -130,26 +132,8 @@ async function saveToStorage(presets: Preset[]) {
     const toSave = presets.map((p) => ({
       id: p.id,
       name: p.name,
-      servers: (p.servers || []).map((s) => ({
-        id: s.id,
-        name: s.name,
-        address: s.address,
-        port: s.port,
-        token: s.token,
-        enabled: s.enabled,
-      })),
-      services: (p.services || []).map((s) => ({
-        id: s.id,
-        name: s.name,
-        protocol: s.protocol,
-        local_ip: s.local_ip,
-        local_port: s.local_port,
-        remote_port: s.remote_port,
-        use_encryption: s.use_encryption,
-        use_compression: s.use_compression,
-        advanced_config: s.advanced_config,
-        is_advanced: s.is_advanced,
-      })),
+      servers: (p.servers || []).map(toSerializableServer),
+      services: (p.services || []).map(toSerializableService),
     }))
     await SaveAppConfig(TOML.stringify({ presets: toSave }))
   } catch (e) {
@@ -215,13 +199,15 @@ export const usePresetStore = defineStore('preset', () => {
     }
   }
 
-  async function startDownloadFrpc(source: DownloadSource = 'ghproxy') {
+  async function startDownloadFrpc(source: DownloadSource = 'ghproxy', useDefaultVersion = false) {
     if (isDownloading.value) return
     isDownloading.value = true
     downloadProgress.value = null
-    downloadedVersion.value = ''
+    if (!useDefaultVersion) {
+      downloadedVersion.value = ''
+    }
     versionFetchError.value = ''
-    console.log('[DownloadFrpc] Starting download with source:', source)
+    console.log('[DownloadFrpc] Starting download with source:', source, 'useDefault:', useDefaultVersion)
 
     EventsOn('download:progress', (progress: DownloadProgress) => {
       downloadProgress.value = progress
@@ -245,38 +231,7 @@ export const usePresetStore = defineStore('preset', () => {
     })
 
     try {
-      await DownloadFrpc(source, false)
-    } catch (e) {
-      console.error('[DownloadFrpc] Download failed:', e)
-      isDownloading.value = false
-    }
-  }
-
-  async function startDownloadFrpcWithDefault(source: DownloadSource = 'ghproxy') {
-    if (isDownloading.value) return
-    isDownloading.value = true
-    downloadProgress.value = null
-    versionFetchError.value = ''
-    console.log('[DownloadFrpc] Starting download with default version, source:', source)
-
-    EventsOn('download:progress', (progress: DownloadProgress) => {
-      downloadProgress.value = progress
-      console.log('[DownloadFrpc] Progress:', progress.percentage.toFixed(1) + '%')
-      if (progress.is_complete) {
-        isDownloading.value = false
-        downloadedVersion.value = progress.downloaded_version || ''
-        console.log('[DownloadFrpc] Download completed, version:', downloadedVersion.value)
-        frpcDownloaded.value = true
-        initFrpc()
-      }
-      if (progress.is_error) {
-        isDownloading.value = false
-        console.error('[DownloadFrpc] Download failed:', progress.error_message)
-      }
-    })
-
-    try {
-      await DownloadFrpc(source, true)
+      await DownloadFrpc(source, useDefaultVersion)
     } catch (e) {
       console.error('[DownloadFrpc] Download failed:', e)
       isDownloading.value = false
@@ -350,29 +305,8 @@ export const usePresetStore = defineStore('preset', () => {
           address: server.address, 
           port: server.port 
         })
-        const serverModel = models.Server.createFrom({
-          id: server.id,
-          name: server.name,
-          address: server.address,
-          port: server.port,
-          token: server.token,
-          status: server.status,
-          enabled: server.enabled,
-          logs: server.logs,
-          uptime: server.uptime,
-        })
-        const servicesModels = preset.services.map(s => models.Service.createFrom({
-          id: s.id,
-          name: s.name,
-          protocol: s.protocol,
-          local_ip: s.local_ip,
-          local_port: s.local_port,
-          remote_port: s.remote_port,
-          use_encryption: s.use_encryption,
-          use_compression: s.use_compression,
-          advanced_config: s.advanced_config,
-          is_advanced: s.is_advanced,
-        }))
+        const serverModel = createServerModel(server)
+        const servicesModels = createServiceModels(preset.services)
         console.log('[ToggleServer] Calling StartServer with services:', servicesModels.length)
         await StartServer(presetId, serverId, serverModel, servicesModels)
         server.status = 'online'
@@ -797,29 +731,8 @@ export const usePresetStore = defineStore('preset', () => {
           try {
             server.status = 'connecting'
             server.logs = []
-            const serverModel = models.Server.createFrom({
-              id: server.id,
-              name: server.name,
-              address: server.address,
-              port: server.port,
-              token: server.token,
-              status: server.status,
-              enabled: server.enabled,
-              logs: server.logs,
-              uptime: server.uptime,
-            })
-            const servicesModels = preset.services.map(s => models.Service.createFrom({
-              id: s.id,
-              name: s.name,
-              protocol: s.protocol,
-              local_ip: s.local_ip,
-              local_port: s.local_port,
-              remote_port: s.remote_port,
-              use_encryption: s.use_encryption,
-              use_compression: s.use_compression,
-              advanced_config: s.advanced_config,
-              is_advanced: s.is_advanced,
-            }))
+            const serverModel = createServerModel(server)
+            const servicesModels = createServiceModels(preset.services)
             await StartServer(preset.id, server.id, serverModel, servicesModels)
             server.status = 'online'
             console.log('[AutoStart] Server started:', server.name)
@@ -892,6 +805,5 @@ export const usePresetStore = defineStore('preset', () => {
     compareFrpcVersions,
     downloadedVersion,
     versionFetchError,
-    startDownloadFrpcWithDefault,
   }
 })
