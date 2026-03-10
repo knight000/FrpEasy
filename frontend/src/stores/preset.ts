@@ -13,7 +13,11 @@ import {
   ImportPresetFromToml,
   ExportPresetAsTomlBatch,
   SaveAppConfig,
-  LoadAppConfig
+  LoadAppConfig,
+  GetAppVersion,
+  GetLatestFrpcVersion,
+  GetCurrentFrpcVersion,
+  CompareFrpcVersions
 } from '../../wailsjs/go/main/App'
 import { models } from '../../wailsjs/go/models'
 import TOML from 'smol-toml'
@@ -779,6 +783,22 @@ export const usePresetStore = defineStore('preset', () => {
     }
   }
 
+  async function getAppVersion(): Promise<string> {
+    return await GetAppVersion()
+  }
+
+  async function getLatestFrpcVersion(): Promise<string> {
+    return await GetLatestFrpcVersion()
+  }
+
+  async function getCurrentFrpcVersion(): Promise<string> {
+    return await GetCurrentFrpcVersion()
+  }
+
+  async function compareFrpcVersions(v1: string, v2: string): Promise<number> {
+    return await CompareFrpcVersions(v1, v2)
+  }
+
   return {
     presets,
     activePresetId,
@@ -816,5 +836,9 @@ export const usePresetStore = defineStore('preset', () => {
     mergePresets,
     autoStartEnabledServers,
     initPresets,
+    getAppVersion,
+    getLatestFrpcVersion,
+    getCurrentFrpcVersion,
+    compareFrpcVersions,
   }
 })

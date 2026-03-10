@@ -14,6 +14,7 @@
       @exportTomlPreset="handleExportTomlPreset"
       @exportToml="handleExportToml"
       @mergePresets="openMergeDialog"
+      @about="openAboutDialog"
     />
 
     <v-main class="bg-grey-lighten-4">
@@ -588,6 +589,81 @@
       </v-card>
     </v-dialog>
 
+    <v-dialog v-model="aboutDialog" max-width="400">
+      <v-card>
+        <v-card-title class="d-flex align-center">
+          <v-icon class="mr-2" color="primary">mdi-information</v-icon>
+          关于 FrpEasy
+        </v-card-title>
+        <v-divider />
+        <v-card-text class="pa-4">
+          <div class="text-center mb-4">
+            <v-icon size="48" color="primary">mdi-swap-horizontal-circle</v-icon>
+            <div class="text-h5 mt-2">FrpEasy</div>
+            <div class="text-caption text-grey">v{{ appVersion }}</div>
+          </div>
+
+          <v-card variant="outlined" class="mb-4">
+            <v-card-text class="pa-3">
+              <div class="text-body-2 mb-2">frp 客户端配置管理工具</div>
+              <div class="d-flex justify-space-between align-center">
+                <span class="text-grey">frpc 版本:</span>
+                <span v-if="currentFrpcVersion">{{ currentFrpcVersion }}</span>
+                <span v-else class="text-grey">未安装</span>
+              </div>
+              <div class="d-flex justify-space-between align-center mt-1">
+                <span class="text-grey">最新版本:</span>
+                <span v-if="checkingFrpcUpdate">
+                  <v-progress-circular indeterminate size="14" />
+                </span>
+                <span v-else-if="latestFrpcVersion">{{ latestFrpcVersion }}</span>
+                <span v-else class="text-grey">-</span>
+              </div>
+            </v-card-text>
+          </v-card>
+
+          <v-btn
+            block
+            color="primary"
+            variant="tonal"
+            class="mb-2"
+            :loading="checkingFrpcUpdate"
+            @click="checkFrpcUpdate"
+          >
+            <v-icon start>mdi-update</v-icon>
+            检查 frpc 更新
+          </v-btn>
+
+          <v-btn
+            v-if="hasFrpcUpdate"
+            block
+            color="success"
+            variant="tonal"
+            class="mb-2"
+            @click="openDownloadFrpc"
+          >
+            <v-icon start>mdi-download</v-icon>
+            下载 frpc 更新
+          </v-btn>
+
+          <v-btn
+            block
+            color="grey"
+            variant="tonal"
+            @click="checkAppUpdate"
+          >
+            <v-icon start>mdi-cellphone-arrow-down</v-icon>
+            检查 FrpEasy 更新
+          </v-btn>
+        </v-card-text>
+        <v-divider />
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="aboutDialog = false">关闭</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <v-snackbar v-model="snackbar.show" :color="snackbar.color" :timeout="3000">
       {{ snackbar.message }}
     </v-snackbar>
@@ -635,6 +711,13 @@ const mergedPresetName = ref('')
 const selectedMergeIds = ref<string[]>([])
 
 const logFullscreen = ref(false)
+
+const aboutDialog = ref(false)
+const appVersion = ref('1.0.0')
+const currentFrpcVersion = ref('')
+const latestFrpcVersion = ref('')
+const checkingFrpcUpdate = ref(false)
+const hasFrpcUpdate = ref(false)
 
 onMounted(async () => {
   await store.initPresets()
@@ -981,6 +1064,42 @@ async function doMergePresets() {
   } else {
     snackbar.value = { show: true, message: '合并失败', color: 'error' }
   }
+}
+
+async function openAboutDialog() {
+  aboutDialog.value = true
+  appVersion.value = await store.getAppVersion()
+  currentFrpcVersion.value = await store.getCurrentFrpcVersion()
+  latestFrpcVersion.value = ''
+}
+
+async function checkFrpcUpdate() {
+  checkingFrpcUpdate.value = true
+  try {
+    latestFrpcVersion.value = await store.getLatestFrpcVersion()
+    const compareResult = await store.compareFrpcVersions(latestFrpcVersion.value, currentFrpcVersion.value)
+    hasFrpcUpdate.value = compareResult > 0
+    if (hasFrpcUpdate.value) {
+      snackbar.value = { show: true, message: `发现新版本 frpc ${latestFrpcVersion.value}`, color: 'info' }
+    } else if (latestFrpcVersion.value) {
+      snackbar.value = { show: true, message: 'frpc 已是最新版本', color: 'success' }
+    } else {
+      snackbar.value = { show: true, message: '无法获取版本信息', color: 'warning' }
+    }
+  } catch {
+    snackbar.value = { show: true, message: '检查更新失败', color: 'error' }
+  } finally {
+    checkingFrpcUpdate.value = false
+  }
+}
+
+function openDownloadFrpc() {
+  aboutDialog.value = false
+  downloadDialog.value = true
+}
+
+function checkAppUpdate() {
+  snackbar.value = { show: true, message: '此功能暂未开放，请关注 GitHub 发布页', color: 'info' }
 }
 </script>
 

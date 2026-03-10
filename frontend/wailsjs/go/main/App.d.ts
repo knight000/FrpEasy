@@ -3,6 +3,8 @@
 import {models} from '../models';
 import {main} from '../models';
 
+export function CompareFrpcVersions(arg1:string,arg2:string):Promise<number>;
+
 export function DownloadFrpc(arg1:string):Promise<void>;
 
 export function ExportPresetAsTomlBatch(arg1:string,arg2:string,arg3:string):Promise<string>;
@@ -11,9 +13,15 @@ export function ExportPresetToml(arg1:string,arg2:string):Promise<string>;
 
 export function ExportToml(arg1:models.Server,arg2:Array<models.Service>):Promise<string>;
 
+export function GetAppVersion():Promise<string>;
+
+export function GetCurrentFrpcVersion():Promise<string>;
+
 export function GetDataDir():Promise<string>;
 
 export function GetFrpcVersion():Promise<string>;
+
+export function GetLatestFrpcVersion():Promise<string>;
 
 export function GetRunningServers():Promise<Array<models.ServerRuntime>>;
 

@@ -1,12 +1,14 @@
 package frpc
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 
@@ -236,4 +238,60 @@ func GetFrpcVersion(binDir string) (string, error) {
 	}
 
 	return strings.TrimSpace(string(output)), nil
+}
+
+type githubRelease struct {
+	TagName string `json:"tag_name"`
+}
+
+func GetLatestFrpcVersion() (string, error) {
+	resp, err := http.Get("https://api.github.com/repos/fatedier/frp/releases/latest")
+	if err != nil {
+		return "", fmt.Errorf("failed to fetch latest version: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("failed to fetch latest version: HTTP %d", resp.StatusCode)
+	}
+
+	var release githubRelease
+	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
+		return "", fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	version := strings.TrimPrefix(release.TagName, "v")
+	return version, nil
+}
+
+func CompareVersions(v1, v2 string) int {
+	re := regexp.MustCompile(`[^0-9.]`)
+	v1 = re.ReplaceAllString(v1, "")
+	v2 = re.ReplaceAllString(v2, "")
+
+	parts1 := strings.Split(v1, ".")
+	parts2 := strings.Split(v2, ".")
+
+	maxLen := len(parts1)
+	if len(parts2) > maxLen {
+		maxLen = len(parts2)
+	}
+
+	for i := 0; i < maxLen; i++ {
+		var n1, n2 int
+		if i < len(parts1) {
+			fmt.Sscanf(parts1[i], "%d", &n1)
+		}
+		if i < len(parts2) {
+			fmt.Sscanf(parts2[i], "%d", &n2)
+		}
+
+		if n1 < n2 {
+			return -1
+		} else if n1 > n2 {
+			return 1
+		}
+	}
+
+	return 0
 }

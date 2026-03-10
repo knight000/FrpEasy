@@ -119,6 +119,15 @@
                 </template>
                 <v-list-item-title>新建预设</v-list-item-title>
               </v-list-item>
+
+              <v-divider />
+
+              <v-list-item @click="fabOpen = false; emit('about')">
+                <template #prepend>
+                  <v-icon color="grey">mdi-information</v-icon>
+                </template>
+                <v-list-item-title>关于</v-list-item-title>
+              </v-list-item>
             </v-list>
           </v-card>
         </v-menu>
@@ -192,6 +201,7 @@ const emit = defineEmits<{
   (e: 'exportTomlPreset', id: string): void
   (e: 'exportToml', id: string): void
   (e: 'mergePresets'): void
+  (e: 'about'): void
 }>()
 
 const store = usePresetStore()

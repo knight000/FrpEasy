@@ -16,6 +16,9 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
+const AppVersion = "1.0.0"
+const AppGitHubRepo = "https://github.com/your-repo/frpeasy"
+
 type App struct {
 	ctx     context.Context
 	dataDir string
@@ -305,4 +308,29 @@ func (a *App) LoadAppConfig() string {
 	}
 	fmt.Println("Loaded config, presets count:", len(appConfig.Presets))
 	return tomlStr
+}
+
+func (a *App) GetAppVersion() string {
+	return AppVersion
+}
+
+func (a *App) GetLatestFrpcVersion() string {
+	version, err := frpc.GetLatestFrpcVersion()
+	if err != nil {
+		fmt.Println("Failed to get latest frpc version:", err)
+		return ""
+	}
+	return version
+}
+
+func (a *App) GetCurrentFrpcVersion() string {
+	version, err := frpc.GetFrpcVersion(filepath.Join(a.dataDir, "bin"))
+	if err != nil {
+		return ""
+	}
+	return version
+}
+
+func (a *App) CompareFrpcVersions(v1, v2 string) int {
+	return frpc.CompareVersions(v1, v2)
 }
