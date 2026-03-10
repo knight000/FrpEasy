@@ -44,13 +44,6 @@ jobs:
           name: FrpEasy ${{ steps.version.outputs.VERSION }}
           body: |
             ## FrpEasy ${{ steps.version.outputs.VERSION }}
-            
-            ### 下载
-            - **FrpEasy-${{ steps.version.outputs.VERSION }}-windows-amd64.zip** - Windows 64位版本
-            
-            ### 使用方法
-            1. 下载并解压 zip 文件
-            2. 运行 `FrpEasy.exe`
           files: build/bin/FrpEasy-${{ steps.version.outputs.VERSION }}-windows-amd64.zip
           draft: false
           prerelease: false
