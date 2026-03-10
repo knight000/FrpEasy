@@ -80,22 +80,48 @@
 
     <template #append>
       <div class="pa-3">
-        <v-btn block color="primary" variant="tonal" class="mb-2" @click="emit('create')">
-          <v-icon start>mdi-plus</v-icon>
-          新建预设
-        </v-btn>
-        <v-btn block color="purple" variant="tonal" class="mb-2" @click="emit('mergePresets')">
-          <v-icon start>mdi-merge</v-icon>
-          合并预设
-        </v-btn>
-        <v-btn block color="success" variant="tonal" class="mb-2" @click="emit('importFrp')">
-          <v-icon start>mdi-file-import</v-icon>
-          导入 frp 配置
-        </v-btn>
-        <v-btn block color="info" variant="tonal" @click="emit('importToml')">
-          <v-icon start>mdi-file-document-outline</v-icon>
-          导入 FrpEasy 预设
-        </v-btn>
+        <v-menu v-model="fabOpen" location="top" :close-on-content-click="true">
+          <template #activator="{ props }">
+            <v-btn v-bind="props" block color="primary" variant="tonal">
+              <v-icon start>mdi-dots-horizontal</v-icon>
+              更多
+            </v-btn>
+          </template>
+
+          <v-card class="mt-1 menu-card">
+            <v-list density="compact" nav>
+              <v-list-item @click="fabOpen = false; emit('importToml')">
+                <template #prepend>
+                  <v-icon color="info">mdi-file-document-outline</v-icon>
+                </template>
+                <v-list-item-title>导入 FrpEasy 预设</v-list-item-title>
+              </v-list-item>
+
+              <v-list-item @click="fabOpen = false; emit('importFrp')">
+                <template #prepend>
+                  <v-icon color="success">mdi-file-import</v-icon>
+                </template>
+                <v-list-item-title>导入 frp 配置</v-list-item-title>
+              </v-list-item>
+
+              <v-list-item @click="fabOpen = false; emit('mergePresets')">
+                <template #prepend>
+                  <v-icon color="purple">mdi-merge</v-icon>
+                </template>
+                <v-list-item-title>合并预设</v-list-item-title>
+              </v-list-item>
+
+              <v-divider />
+
+              <v-list-item @click="fabOpen = false; emit('create')">
+                <template #prepend>
+                  <v-icon color="primary">mdi-plus</v-icon>
+                </template>
+                <v-list-item-title>新建预设</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-card>
+        </v-menu>
       </div>
     </template>
 
@@ -170,6 +196,7 @@ const emit = defineEmits<{
 
 const store = usePresetStore()
 const hasClipboardData = ref(false)
+const fabOpen = ref(false)
 
 const contextMenu = ref({
   show: false,
@@ -260,5 +287,9 @@ onUnmounted(() => {
 
 .v-list-group .v-list-item {
   padding-inline-start: 20px !important;
+}
+
+.menu-card {
+  min-width: 200px;
 }
 </style>
