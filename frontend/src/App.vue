@@ -139,7 +139,7 @@
                               {{ service.protocol }}
                             </v-chip>
                           </td>
-                          <td>{{ service.local_ip }}:{{ service.local_port }}</td>
+                          <td>{{ service.local_ip }}:{{ displayLocalPort(service) }}</td>
                           <td>{{ displayPort(service) }}</td>
                           <td>
                             <v-icon :color="service.use_encryption ? 'success' : 'grey'" size="small">
@@ -902,6 +902,13 @@ function displayPort(service: Service): string {
     return service.display_ports
   }
   return String(service.remote_port)
+}
+
+function displayLocalPort(service: Service): string {
+  if (service.display_local_ports) {
+    return service.display_local_ports
+  }
+  return String(service.local_port)
 }
 
 function formatUptime(seconds: number): string {

@@ -57,6 +57,7 @@ export interface Service {
   advanced_config?: string
   is_advanced?: boolean
   display_ports?: string
+  display_local_ports?: string
 }
 
 export interface Preset {
@@ -688,6 +689,7 @@ export const usePresetStore = defineStore('preset', () => {
           service.name = result.NamePattern
           service.protocol = result.Protocol
           service.display_ports = result.RemotePorts
+          service.display_local_ports = result.LocalPorts
           service.local_ip = '127.0.0.1'
           service.local_port = 0
         }
@@ -697,6 +699,7 @@ export const usePresetStore = defineStore('preset', () => {
     } else {
       parseAdvancedConfigToBasic(service)
       service.display_ports = ''
+      service.display_local_ports = ''
     }
   }
 
