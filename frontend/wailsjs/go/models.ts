@@ -1,3 +1,28 @@
+export namespace frpc {
+	
+	export class TemplateDisplayInfo {
+	    NamePattern: string;
+	    Protocol: string;
+	    LocalPorts: string;
+	    RemotePorts: string;
+	    RawContent: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new TemplateDisplayInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.NamePattern = source["NamePattern"];
+	        this.Protocol = source["Protocol"];
+	        this.LocalPorts = source["LocalPorts"];
+	        this.RemotePorts = source["RemotePorts"];
+	        this.RawContent = source["RawContent"];
+	    }
+	}
+
+}
+
 export namespace models {
 	
 	export class Service {

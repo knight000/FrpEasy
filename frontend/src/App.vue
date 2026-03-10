@@ -1103,12 +1103,12 @@ function getAdvancedConfigHint(service: Service): string {
   return `name = "${service.name}"\ntype = "${service.protocol.toLowerCase()}"\nlocalIP = "${service.local_ip}"\nlocalPort = ${service.local_port}\nremotePort = ${service.remote_port}`
 }
 
-function saveServices() {
+async function saveServices() {
   if (!store.activePreset) return
   
   for (const service of editingServices.value) {
     if (service.is_advanced && service.advanced_config) {
-      parseAdvancedConfigToBasic(service)
+      await store.parseAdvancedConfigService(service)
     }
   }
   

@@ -17,7 +17,8 @@ import {
   GetAppVersion,
   GetLatestFrpcVersion,
   GetCurrentFrpcVersion,
-  CompareFrpcVersions
+  CompareFrpcVersions,
+  ParseAdvancedConfig,
 } from '../../wailsjs/go/main/App'
 import { models } from '../../wailsjs/go/models'
 import TOML from 'smol-toml'
@@ -677,6 +678,23 @@ export const usePresetStore = defineStore('preset', () => {
     activeServerId.value = preset.servers[0]?.id || null
   }
 
+  async function parseAdvancedConfigService(service: Service): Promise<void> {
+    if (!service.is_advanced || !service.advanced_config) return
+
+    if (service.advanced_config.includes('{{') && service.advanced_config.includes('}}')) {
+      try {
+        const result = await ParseAdvancedConfig(service.advanced_config)
+        if (result) {
+          service.name = result.NamePattern
+          service.protocol = result.Protocol
+          service.display_ports = result.RemotePorts
+        }
+      } catch (e) {
+        console.warn('[ParseAdvancedConfig] Failed:', e)
+      }
+    }
+  }
+
   async function mergePresets(presetIds: string[], newName: string): Promise<boolean> {
     console.log('[MergePresets] Merging presets:', presetIds, 'into:', newName)
     
@@ -823,6 +841,7 @@ export const usePresetStore = defineStore('preset', () => {
     getLatestFrpcVersion,
     getCurrentFrpcVersion,
     compareFrpcVersions,
+    parseAdvancedConfigService,
     downloadedVersion,
     versionFetchError,
   }

@@ -338,3 +338,15 @@ func (a *App) GetCurrentFrpcVersion() string {
 func (a *App) CompareFrpcVersions(v1, v2 string) int {
 	return frpc.CompareVersions(v1, v2)
 }
+
+func (a *App) ParseAdvancedConfig(config string) *frpc.TemplateDisplayInfo {
+	if !frpc.ContainsGoTemplate(config) {
+		return nil
+	}
+	info, err := frpc.ParseGoTemplateBlock(config)
+	if err != nil {
+		fmt.Println("Failed to parse advanced config:", err)
+		return nil
+	}
+	return info
+}
