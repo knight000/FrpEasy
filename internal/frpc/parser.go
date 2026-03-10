@@ -206,6 +206,49 @@ func parseTomlWithGoTemplate(content []byte) (*FrpConfig, error) {
 		config.Proxies = append(config.Proxies, proxyConfig)
 	}
 
+	if proxies, ok := raw["proxies"].([]interface{}); ok {
+		for _, p := range proxies {
+			if proxy, ok := p.(map[string]interface{}); ok {
+				proxyConfig := ProxyConfig{
+					LocalIP: "127.0.0.1",
+				}
+
+				if v := getMapStringCI(proxy, "name"); v != "" {
+					proxyConfig.Name = v
+				}
+				if v := getMapStringCI(proxy, "type"); v != "" {
+					proxyConfig.Type = v
+				}
+				if v := getMapStringCI(proxy, "localIP"); v != "" {
+					proxyConfig.LocalIP = v
+				}
+				if v := getMapIntCI(proxy, "localPort"); v != 0 {
+					proxyConfig.LocalPort = int(v)
+				}
+				if v := getMapIntCI(proxy, "remotePort"); v != 0 {
+					proxyConfig.RemotePort = int(v)
+				}
+
+				if transport := getMapMapCI(proxy, "transport"); transport != nil {
+					if v := getMapBoolCI(transport, "useEncryption"); v {
+						proxyConfig.UseEncryption = v
+					}
+					if v := getMapBoolCI(transport, "useCompression"); v {
+						proxyConfig.UseCompression = v
+					}
+				}
+
+				advancedToml, hasAdvanced := extractProxyToml(proxy)
+				if hasAdvanced {
+					proxyConfig.AdvancedConfig = advancedToml
+					proxyConfig.IsAdvanced = true
+				}
+
+				config.Proxies = append(config.Proxies, proxyConfig)
+			}
+		}
+	}
+
 	return config, nil
 }
 
