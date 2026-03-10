@@ -36,6 +36,8 @@ type ServiceConfig struct {
 	RemotePort     int    `toml:"remote_port"`
 	UseEncryption  bool   `toml:"use_encryption"`
 	UseCompression bool   `toml:"use_compression"`
+	AdvancedConfig string `toml:"advanced_config"`
+	IsAdvanced     bool   `toml:"is_advanced"`
 }
 
 func SaveConfig(path string, config *AppConfig) error {

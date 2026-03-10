@@ -25,18 +25,24 @@ func GenerateConfig(server *models.Server, services []models.Service) string {
 	sb.WriteString("level = \"info\"\n")
 
 	for _, service := range services {
-		sb.WriteString("\n[[proxies]]\n")
-		sb.WriteString(fmt.Sprintf("name = \"%s\"\n", service.Name))
-		sb.WriteString(fmt.Sprintf("type = \"%s\"\n", strings.ToLower(string(service.Protocol))))
-		sb.WriteString(fmt.Sprintf("localIP = \"%s\"\n", service.LocalIP))
-		sb.WriteString(fmt.Sprintf("localPort = %d\n", service.LocalPort))
-		sb.WriteString(fmt.Sprintf("remotePort = %d\n", service.RemotePort))
+		if service.IsAdvanced && service.AdvancedConfig != "" {
+			sb.WriteString("\n[[proxies]]\n")
+			sb.WriteString(service.AdvancedConfig)
+			sb.WriteString("\n")
+		} else {
+			sb.WriteString("\n[[proxies]]\n")
+			sb.WriteString(fmt.Sprintf("name = \"%s\"\n", service.Name))
+			sb.WriteString(fmt.Sprintf("type = \"%s\"\n", strings.ToLower(string(service.Protocol))))
+			sb.WriteString(fmt.Sprintf("localIP = \"%s\"\n", service.LocalIP))
+			sb.WriteString(fmt.Sprintf("localPort = %d\n", service.LocalPort))
+			sb.WriteString(fmt.Sprintf("remotePort = %d\n", service.RemotePort))
 
-		if service.UseEncryption {
-			sb.WriteString("transport.useEncryption = true\n")
-		}
-		if service.UseCompression {
-			sb.WriteString("transport.useCompression = true\n")
+			if service.UseEncryption {
+				sb.WriteString("transport.useEncryption = true\n")
+			}
+			if service.UseCompression {
+				sb.WriteString("transport.useCompression = true\n")
+			}
 		}
 	}
 

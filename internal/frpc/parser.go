@@ -32,6 +32,8 @@ type ProxyConfig struct {
 	RemotePort     int
 	UseEncryption  bool
 	UseCompression bool
+	AdvancedConfig string
+	IsAdvanced     bool
 }
 
 func ParseTomlFile(filePath string) (*FrpConfig, error) {
@@ -41,6 +43,82 @@ func ParseTomlFile(filePath string) (*FrpConfig, error) {
 	}
 
 	return ParseTomlContent(content)
+}
+
+var basicProxyFields = map[string]bool{
+	"name":                     true,
+	"type":                     true,
+	"localIP":                  true,
+	"localPort":                true,
+	"remotePort":               true,
+	"transport":                false,
+	"transport.useEncryption":  false,
+	"transport.useCompression": false,
+}
+
+func isBasicProxyField(key string) bool {
+	if basic, ok := basicProxyFields[key]; ok && basic {
+		return true
+	}
+	if strings.HasPrefix(key, "transport.") {
+		suffix := key[10:]
+		if suffix == "useEncryption" || suffix == "useCompression" {
+			return true
+		}
+	}
+	return false
+}
+
+func extractProxyToml(proxy map[string]interface{}) (string, bool) {
+	var sb strings.Builder
+	hasAdvanced := false
+
+	for key, value := range proxy {
+		if key == "transport" {
+			if transport, ok := value.(map[string]interface{}); ok {
+				for tkey, tvalue := range transport {
+					fullKey := "transport." + tkey
+					if isBasicProxyField(fullKey) {
+						if b, ok := tvalue.(bool); ok && b {
+							sb.WriteString(fmt.Sprintf("%s = true\n", fullKey))
+						}
+					} else {
+						hasAdvanced = true
+						switch v := tvalue.(type) {
+						case string:
+							sb.WriteString(fmt.Sprintf("%s = \"%s\"\n", fullKey, v))
+						case int64:
+							sb.WriteString(fmt.Sprintf("%s = %d\n", fullKey, v))
+						case float64:
+							sb.WriteString(fmt.Sprintf("%s = %v\n", fullKey, v))
+						case bool:
+							sb.WriteString(fmt.Sprintf("%s = %v\n", fullKey, v))
+						default:
+							data, _ := toml.Marshal(map[string]interface{}{tkey: v})
+							sb.WriteString(string(data))
+						}
+					}
+				}
+			}
+		} else if !isBasicProxyField(key) {
+			hasAdvanced = true
+			switch v := value.(type) {
+			case string:
+				sb.WriteString(fmt.Sprintf("%s = \"%s\"\n", key, v))
+			case int64:
+				sb.WriteString(fmt.Sprintf("%s = %d\n", key, v))
+			case float64:
+				sb.WriteString(fmt.Sprintf("%s = %v\n", key, v))
+			case bool:
+				sb.WriteString(fmt.Sprintf("%s = %v\n", key, v))
+			default:
+				data, _ := toml.Marshal(map[string]interface{}{key: v})
+				sb.WriteString(string(data))
+			}
+		}
+	}
+
+	return sb.String(), hasAdvanced
 }
 
 func ParseTomlContent(content []byte) (*FrpConfig, error) {
@@ -111,6 +189,12 @@ func ParseTomlContent(content []byte) (*FrpConfig, error) {
 					if v, ok := transport["useCompression"].(bool); ok {
 						proxyConfig.UseCompression = v
 					}
+				}
+
+				advancedToml, hasAdvanced := extractProxyToml(proxy)
+				if hasAdvanced {
+					proxyConfig.AdvancedConfig = advancedToml
+					proxyConfig.IsAdvanced = true
 				}
 
 				config.Proxies = append(config.Proxies, proxyConfig)
@@ -327,6 +411,8 @@ func ConvertToModels(config *FrpConfig, presetName string) (*models.Preset, erro
 			RemotePort:     proxy.RemotePort,
 			UseEncryption:  useEncryption,
 			UseCompression: useCompression,
+			AdvancedConfig: proxy.AdvancedConfig,
+			IsAdvanced:     proxy.IsAdvanced,
 		}
 		preset.Services = append(preset.Services, service)
 	}

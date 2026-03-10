@@ -64,6 +64,8 @@ export namespace models {
 	    remote_port: number;
 	    use_encryption: boolean;
 	    use_compression: boolean;
+	    advanced_config: string;
+	    is_advanced: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Service(source);
@@ -79,6 +81,8 @@ export namespace models {
 	        this.remote_port = source["remote_port"];
 	        this.use_encryption = source["use_encryption"];
 	        this.use_compression = source["use_compression"];
+	        this.advanced_config = source["advanced_config"];
+	        this.is_advanced = source["is_advanced"];
 	    }
 	}
 	export class Server {

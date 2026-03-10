@@ -121,7 +121,19 @@
                       </thead>
                       <tbody>
                         <tr v-for="service in store.activePreset?.services || []" :key="service.id">
-                          <td class="font-weight-medium">{{ service.name }}</td>
+                          <td>
+                            <div class="d-flex align-center">
+                              <v-chip
+                                v-if="service.is_advanced"
+                                color="purple"
+                                size="x-small"
+                                class="mr-1"
+                              >
+                                高级
+                              </v-chip>
+                              <span class="font-weight-medium">{{ service.name }}</span>
+                            </div>
+                          </td>
                           <td>
                             <v-chip :color="getProtocolColor(service.protocol)" size="x-small">
                               {{ service.protocol }}
@@ -368,7 +380,7 @@
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="servicesDialog" max-width="900">
+    <v-dialog v-model="servicesDialog" max-width="950">
       <v-card>
         <v-card-title class="d-flex align-center">
           编辑服务规则
@@ -379,34 +391,162 @@
           </v-btn>
         </v-card-title>
         <v-divider />
-        <v-card-text class="pa-4">
+        <v-card-text class="pa-4" style="max-height: 70vh; overflow-y: auto;">
           <template v-if="editingServices.length > 0">
-            <v-simple-table dense class="services-table">
-              <thead>
-                <tr>
-                  <th style="width: 180px">名称</th>
-                  <th style="width: 140px">协议</th>
-                  <th style="width: 160px">本地IP</th>
-                  <th style="width: 100px">本地端口</th>
-                  <th style="width: 100px">远程端口</th>
-                  <th style="width: 60px" class="text-center">加密</th>
-                  <th style="width: 60px" class="text-center">压缩</th>
-                  <th style="width: 40px"></th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(service, i) in editingServices" :key="i">
-                  <td><v-text-field v-model="service.name" density="compact" hide-details variant="outlined" /></td>
-                  <td><v-select v-model="service.protocol" :items="['TCP', 'UDP', 'HTTP', 'HTTPS']" density="compact" hide-details variant="outlined" /></td>
-                  <td><v-text-field v-model="service.local_ip" density="compact" hide-details variant="outlined" /></td>
-                  <td><v-text-field v-model.number="service.local_port" density="compact" hide-details type="number" variant="outlined" /></td>
-                  <td><v-text-field v-model.number="service.remote_port" density="compact" hide-details type="number" variant="outlined" /></td>
-                  <td class="text-center"><v-checkbox v-model="service.use_encryption" density="compact" hide-details color="primary" /></td>
-                  <td class="text-center"><v-checkbox v-model="service.use_compression" density="compact" hide-details color="primary" /></td>
-                  <td class="text-center"><v-btn icon="mdi-delete" size="small" variant="text" color="error" @click="editingServices.splice(i, 1)" /></td>
-                </tr>
-              </tbody>
-            </v-simple-table>
+            <v-expansion-panels v-model="expandedServicePanel" multiple>
+              <v-expansion-panel
+                v-for="(service, i) in editingServices"
+                :key="i"
+                :value="i"
+              >
+                <v-expansion-panel-title>
+                  <div class="d-flex align-center" style="width: 100%;">
+                    <v-chip
+                      v-if="service.is_advanced"
+                      color="purple"
+                      size="x-small"
+                      class="mr-2"
+                    >
+                      高级
+                    </v-chip>
+                    <span class="font-weight-medium">{{ service.name || '未命名' }}</span>
+                    <v-chip :color="getProtocolColor(service.protocol)" size="x-small" class="ml-2">
+                      {{ service.protocol }}
+                    </v-chip>
+                    <span class="text-grey text-caption ml-2">
+                      {{ service.local_ip }}:{{ service.local_port }} → {{ service.remote_port }}
+                    </span>
+                    <v-spacer />
+                    <v-btn
+                      icon="mdi-delete"
+                      size="small"
+                      variant="text"
+                      color="error"
+                      @click.stop="editingServices.splice(i, 1); expandedServicePanel = null"
+                    />
+                  </div>
+                </v-expansion-panel-title>
+                <v-expansion-panel-text>
+                  <div class="d-flex align-center mb-3">
+                    <v-btn-toggle
+                      v-model="service.is_advanced"
+                      :mandatory="true"
+                      density="compact"
+                      color="primary"
+                    >
+                      <v-btn :value="false" size="small">
+                        <v-icon start>mdi-form-textbox</v-icon>
+                        基础
+                      </v-btn>
+                      <v-btn :value="true" size="small">
+                        <v-icon start>mdi-code-tags</v-icon>
+                        高级
+                      </v-btn>
+                    </v-btn-toggle>
+                    <v-chip v-if="service.is_advanced" color="warning" size="x-small" class="ml-2">
+                      高级模式：直接编辑 TOML
+                    </v-chip>
+                  </div>
+
+                  <template v-if="!service.is_advanced">
+                    <v-row>
+                      <v-col cols="6">
+                        <v-text-field
+                          v-model="service.name"
+                          label="名称"
+                          density="compact"
+                          variant="outlined"
+                          hide-details
+                        />
+                      </v-col>
+                      <v-col cols="6">
+                        <v-select
+                          v-model="service.protocol"
+                          :items="['TCP', 'UDP', 'HTTP', 'HTTPS']"
+                          label="协议"
+                          density="compact"
+                          variant="outlined"
+                          hide-details
+                        />
+                      </v-col>
+                      <v-col cols="4">
+                        <v-text-field
+                          v-model="service.local_ip"
+                          label="本地IP"
+                          density="compact"
+                          variant="outlined"
+                          hide-details
+                        />
+                      </v-col>
+                      <v-col cols="4">
+                        <v-text-field
+                          v-model.number="service.local_port"
+                          label="本地端口"
+                          type="number"
+                          density="compact"
+                          variant="outlined"
+                          hide-details
+                        />
+                      </v-col>
+                      <v-col cols="4">
+                        <v-text-field
+                          v-model.number="service.remote_port"
+                          label="远程端口"
+                          type="number"
+                          density="compact"
+                          variant="outlined"
+                          hide-details
+                        />
+                      </v-col>
+                      <v-col cols="6">
+                        <v-checkbox
+                          v-model="service.use_encryption"
+                          label="启用加密"
+                          density="compact"
+                          hide-details
+                          color="primary"
+                        />
+                      </v-col>
+                      <v-col cols="6">
+                        <v-checkbox
+                          v-model="service.use_compression"
+                          label="启用压缩"
+                          density="compact"
+                          hide-details
+                          color="primary"
+                        />
+                      </v-col>
+                    </v-row>
+                  </template>
+
+                  <template v-else>
+                    <div class="text-caption text-grey mb-2">
+                      直接编辑 [[proxies]] 中的配置内容（不包含 [[proxies]] 标题）
+                    </div>
+                    <v-textarea
+                      v-model="service.advanced_config"
+                      label="TOML 配置"
+                      rows="10"
+                      auto-grow
+                      density="compact"
+                      variant="outlined"
+                      :hint="getAdvancedConfigHint(service)"
+                      persistent-hint
+                      style="font-family: monospace;"
+                    />
+                    <v-btn
+                      size="small"
+                      variant="text"
+                      color="primary"
+                      class="mt-2"
+                      @click="generateDefaultAdvancedConfig(service)"
+                    >
+                      从基础配置生成
+                    </v-btn>
+                  </template>
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+            </v-expansion-panels>
           </template>
           <div v-else class="text-center py-8 text-grey">暂未配置服务规则</div>
         </v-card-text>
@@ -704,6 +844,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { usePresetStore, type Server, type Service } from '@/stores/preset'
 import PresetSidebar from '@/components/PresetSidebar.vue'
 import LogConsole from '@/components/LogConsole.vue'
+import TOML from 'smol-toml'
 
 const store = usePresetStore()
 
@@ -731,6 +872,7 @@ const presetToDelete = ref<{id: string, name: string} | null>(null)
 const isNewServer = ref(false)
 const editingServer = ref<{name: string, address: string, port: number, token: string} | null>(null)
 const editingServices = ref<Service[]>([])
+const expandedServicePanel = ref<number | number[] | null>(null)
 const snackbar = ref({ show: false, message: '', color: 'success' })
 
 const mergeDialog = ref(false)
@@ -998,12 +1140,87 @@ function addService() {
     remote_port: 9000,
     local_ip: '127.0.0.1',
     use_encryption: false,
-    use_compression: false
+    use_compression: false,
+    advanced_config: '',
+    is_advanced: false
   })
+  expandedServicePanel.value = editingServices.value.length - 1
+}
+
+function generateDefaultAdvancedConfig(service: Service) {
+  const lines: string[] = []
+  lines.push(`name = "${service.name}"`)
+  lines.push(`type = "${service.protocol.toLowerCase()}"`)
+  lines.push(`localIP = "${service.local_ip}"`)
+  lines.push(`localPort = ${service.local_port}`)
+  lines.push(`remotePort = ${service.remote_port}`)
+  if (service.use_encryption) {
+    lines.push('transport.useEncryption = true')
+  }
+  if (service.use_compression) {
+    lines.push('transport.useCompression = true')
+  }
+  service.advanced_config = lines.join('\n')
+}
+
+function getAdvancedConfigHint(service: Service): string {
+  return `name = "${service.name}"\ntype = "${service.protocol.toLowerCase()}"\nlocalIP = "${service.local_ip}"\nlocalPort = ${service.local_port}\nremotePort = ${service.remote_port}`
+}
+
+function parseAdvancedConfigToBasic(service: Service) {
+  if (!service.advanced_config || !service.advanced_config.trim()) return
+  
+  try {
+    const parsed = TOML.parse(service.advanced_config) as any
+    
+    service.protocol = 'TCP'
+    service.local_ip = ''
+    service.local_port = 0
+    service.remote_port = 0
+    service.use_encryption = false
+    service.use_compression = false
+    
+    if (parsed.name && typeof parsed.name === 'string') {
+      service.name = parsed.name
+    }
+    if (parsed.type && typeof parsed.type === 'string') {
+      const typeMap: Record<string, string> = {
+        'tcp': 'TCP',
+        'udp': 'UDP',
+        'http': 'HTTP',
+        'https': 'HTTPS',
+      }
+      service.protocol = typeMap[parsed.type.toLowerCase()] || parsed.type.toUpperCase()
+    }
+    if (parsed.localIP !== undefined) {
+      service.local_ip = String(parsed.localIP)
+    }
+    if (parsed.localPort !== undefined) {
+      service.local_port = Number(parsed.localPort)
+    }
+    if (parsed.remotePort !== undefined) {
+      service.remote_port = Number(parsed.remotePort)
+    }
+    if (parsed.transport?.useEncryption !== undefined) {
+      service.use_encryption = Boolean(parsed.transport.useEncryption)
+    }
+    if (parsed.transport?.useCompression !== undefined) {
+      service.use_compression = Boolean(parsed.transport.useCompression)
+    }
+  } catch (e) {
+    console.warn('Failed to parse advanced config:', e)
+  }
 }
 
 function saveServices() {
   if (!store.activePreset) return
+  
+  for (const service of editingServices.value) {
+    if (service.is_advanced && service.advanced_config) {
+      parseAdvancedConfigToBasic(service)
+    }
+  }
+  
   store.updatePreset(store.activePreset.id, { services: JSON.parse(JSON.stringify(editingServices.value)) })
   servicesDialog.value = false
   snackbar.value = { show: true, message: '服务规则已保存', color: 'success' }

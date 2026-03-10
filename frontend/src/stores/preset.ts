@@ -50,6 +50,8 @@ export interface Service {
   remote_port: number
   use_encryption: boolean
   use_compression: boolean
+  advanced_config?: string
+  is_advanced?: boolean
 }
 
 export interface Preset {
@@ -145,6 +147,8 @@ async function saveToStorage(presets: Preset[]) {
         remote_port: s.remote_port,
         use_encryption: s.use_encryption,
         use_compression: s.use_compression,
+        advanced_config: s.advanced_config,
+        is_advanced: s.is_advanced,
       })),
     }))
     await SaveAppConfig(TOML.stringify({ presets: toSave }))
@@ -366,6 +370,8 @@ export const usePresetStore = defineStore('preset', () => {
           remote_port: s.remote_port,
           use_encryption: s.use_encryption,
           use_compression: s.use_compression,
+          advanced_config: s.advanced_config,
+          is_advanced: s.is_advanced,
         }))
         console.log('[ToggleServer] Calling StartServer with services:', servicesModels.length)
         await StartServer(presetId, serverId, serverModel, servicesModels)
@@ -811,6 +817,8 @@ export const usePresetStore = defineStore('preset', () => {
               remote_port: s.remote_port,
               use_encryption: s.use_encryption,
               use_compression: s.use_compression,
+              advanced_config: s.advanced_config,
+              is_advanced: s.is_advanced,
             }))
             await StartServer(preset.id, server.id, serverModel, servicesModels)
             server.status = 'online'

@@ -1,0 +1,56 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Wails
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+      - name: Build
+        run: wails build -clean
+
+      - name: Get version
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Create archive
+        run: |
+          cd build/bin
+          Compress-Archive -Path FrpEasy.exe -DestinationPath FrpEasy-${{ steps.version.outputs.VERSION }}-windows-amd64.zip
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: FrpEasy ${{ steps.version.outputs.VERSION }}
+          body: |
+            ## FrpEasy ${{ steps.version.outputs.VERSION }}
+            
+            ### 下载
+            - **FrpEasy-${{ steps.version.outputs.VERSION }}-windows-amd64.zip** - Windows 64位版本
+            
+            ### 使用方法
+            1. 下载并解压 zip 文件
+            2. 运行 `FrpEasy.exe`
+          files: build/bin/FrpEasy-${{ steps.version.outputs.VERSION }}-windows-amd64.zip
+          draft: false
+          prerelease: false

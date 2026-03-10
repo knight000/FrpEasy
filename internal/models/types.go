@@ -34,6 +34,8 @@ type Service struct {
 	RemotePort     int             `json:"remote_port"`
 	UseEncryption  bool            `json:"use_encryption"`
 	UseCompression bool            `json:"use_compression"`
+	AdvancedConfig string          `json:"advanced_config"`
+	IsAdvanced     bool            `json:"is_advanced"`
 }
 
 type Server struct {
