@@ -39,7 +39,7 @@ FrpEasy/
 │   │   ├── App.vue             # Main component
 │   │   ├── components/         # Vue components
 │   │   ├── composables/        # Vue composables (useStatus, useSnackbar)
-│   │   ├── helpers/            # Helper functions (modelConverters, serializers)
+│   │   ├── helpers/            # Helper functions (modelConverters, serializers, serviceParser)
 │   │   └── stores/preset.ts    # Pinia store (state + Wails bindings)
 │   └── wailsjs/                # AUTO-GENERATED - DO NOT EDIT
 └── {exe_dir}/frpeasy/          # Runtime data: config.toml, bin/, configs/
@@ -112,12 +112,11 @@ import TOML from 'smol-toml'
 // 4. Local imports
 import type { LogEntry } from '@/stores/preset'
 import { createServiceModels, createServerModel } from '@/helpers/modelConverters'
-import { toSerializableService, toSerializableServer } from '@/helpers/serializers'
 import { useStatus } from '@/composables/useStatus'
-import { useSnackbar } from '@/composables/useSnackbar'
 ```
 
 ### Key Patterns
+- **Service Creation**: ALWAYS use `createService()` from `@/helpers/serviceParser` - calls backend `NormalizeService` to generate ID, parse advanced config, set display fields
 - **Wails Model Conversion**: Use helpers from `@/helpers/modelConverters`
 - **Data Serialization**: Use helpers from `@/helpers/serializers`
 - **Status Display**: Use `useStatus` composable for consistent status mapping
@@ -181,95 +180,33 @@ git push origin v1.0.0
 ```
 GitHub Actions auto-builds and creates release.
 
-## Helper Files
+## Helper Files Reference
 
-### modelConverters.ts
-```typescript
-createServerModel(server: Server): models.Server
-createServiceModel(service: Service): models.Service
-createServiceModels(services: Service[]): models.Service[]
-```
-
-### serializers.ts
-```typescript
-toSerializableServer(server: Server)
-toSerializableService(service: Service)
-toSerializablePreset(preset: Preset)
-```
-
-### useStatus.ts
-```typescript
-useStatus(status: ServerStatus): { dotClass, chipColor, text }
-getStatusDotClass(status: ServerStatus): string
-getStatusChipColor(status: ServerStatus): string
-getStatusText(status: ServerStatus): string
-```
-
-### useSnackbar.ts
-```typescript
-useSnackbar(): { snackbar, showSnackbar, showSuccess, showError, showInfo, showWarning }
-```
+| File | Purpose |
+|------|---------|
+| `helpers/modelConverters.ts` | Convert local types to Wails models |
+| `helpers/serializers.ts` | Serialize data for Wails IPC |
+| `helpers/serviceParser.ts` | Service creation via `NormalizeService` |
+| `composables/useStatus.ts` | Status dot/chip color mapping |
+| `composables/useSnackbar.ts` | Notification helpers |
+| `composables/useDownloadSource.ts` | Download source configuration |
 
 ## Key Discoveries
 
 1. **Windows Console**: `exec.Command` shows console unless `SysProcAttr` with `HideWindow: true` is set
 2. **TOML vs JSON**: TOML (snake_case) for config files, JSON (snake_case via tags) for Wails IPC
 3. **v-menu Positioning**: Fails in Wails WebView - use `position: fixed` with v-card
-4. **Selection Loss**: Menu opening clears text selection - save before showing
-5. **Wails Imports**: TypeScript cannot resolve `../../wailsjs/go/main/App` in Vue components - import in Pinia store
-6. **smol-toml**: `TOML.parse()` returns `TomlTable` type - use `as any` for TypeScript
-7. **Service Advanced Mode**: When `is_advanced=true` and `advanced_config` is non-empty, use it directly; otherwise use basic fields
-
-## Code Optimization TODO
-
-### High Priority
-- [x] Unify struct definitions in config package and models package
-
-### Medium Priority
-- [x] Extract generic confirm dialog component
-- [x] Optimize download source selector UI duplication
-
-### Low Priority
-- [x] Consider moving ImportResult to models package
-- [ ] Optimize wails generate module post-sync workflow
-
-## New Helper Files Created
-
-- `frontend/src/helpers/modelConverters.ts` - Wails model conversion utilities
-- `frontend/src/helpers/serializers.ts` - Data serialization utilities
-- `frontend/src/helpers/serviceParser.ts` - Service config parsing (FRPEASY prefix, TOML)
-- `frontend/src/composables/useStatus.ts` - Status mapping composable
-- `frontend/src/composables/useSnackbar.ts` - Snackbar utilities
-- `frontend/src/composables/useDownloadSource.ts` - Download source configuration
-- `frontend/src/components/ConfirmDialog.vue` - Generic confirmation dialog component
-- `frontend/src/components/DownloadSourceSelect.vue` - Download source selector component
-- `internal/config/config.go` - Added conversion functions between config and models
-- `internal/frpc/template_parser.go` - frp Go template parsing (port range)
-
-## Completed Optimizations
-
-- [x] Fixed duplicate `serverAddr` assignment in `parser.go`
-- [x] Simplified `isBasicProxyField` function in `parser.go`
-- [x] Removed nested `generateID` function in `manager.go`
-- [x] Created helper files: modelConverters.ts, serializers.ts, useStatus.ts, useSnackbar.ts
-- [x] Updated preset.ts to use createServiceModels helper
-- [x] Updated preset.ts to use toSerializableServer/Service helper
-- [x] Merged startDownloadFrpc and startDownloadFrpcWithDefault functions
-- [x] Updated App.vue to use useStatus composable
-- [x] Updated PresetSidebar.vue to use shared status functions
-- [x] Replaced snackbar patterns with useSnackbar composable in App.vue
-- [x] Unified config and models package struct definitions with conversion functions
-- [x] Simplified LogConsole.vue copy function wrappers
-- [x] Extracted ConfirmDialog component for reusable confirmation dialogs
-- [x] Created DownloadSourceSelect component and useDownloadSource composable
-- [x] Moved ImportResult to models package
-- [x] Support Go template port range mapping (parseNumberRangePair)
+4. **Wails Imports**: TypeScript cannot resolve `../../wailsjs/go/main/App` in Vue components - import in Pinia store
+5. **smol-toml**: `TOML.parse()` returns `TomlTable` type - use `as any` for TypeScript
+6. **Service Advanced Mode**: When `is_advanced=true` and `advanced_config` is non-empty, use it directly
+7. **NormalizeService Pattern**: All service creation must go through backend to generate ID and display fields
+8. **Display Fields Initialization**: `display_ports` not stored in TOML - initialized on preset switch via `initializeAdvancedServices()`
+9. **Mixed Import**: frp TOML can contain both Go templates and regular proxies - both are parsed
 
 ## Go Template Support
 
 FrpEasy supports frp's Go template syntax for port range mapping:
 
-### Example Configuration
 ```toml
 {{- range $_, $v := parseNumberRangePair "6000-6006,6007" "6000-6006,6007" }}
 [[proxies]]
@@ -280,16 +217,6 @@ remotePort = {{ $v.Second }}
 {{- end }}
 ```
 
-### Implementation Details
 - **Import**: Backend parses Go template and extracts display information
 - **Display**: `display_ports` field shows "6000-6007" (range format)
-- **Export**: Template configs are exported as-is, no metadata prefix
-- **Storage**: `advanced_config` contains raw template, `display_ports` contains port range
-
-### Files Modified
-- `internal/frpc/template_parser.go` - Parse Go template blocks
-- `internal/frpc/parser.go` - Extract display info (name pattern, protocol, ports)
-- `internal/models/types.go` - Added `DisplayPorts` field
-- `frontend/src/stores/preset.ts` - Added `display_ports` to Service interface
-- `frontend/src/App.vue` - `displayPort()` uses `display_ports` field
-- `frontend/src/helpers/serviceParser.ts` - Simplified (no prefix parsing)
+- **Export**: Template configs are exported as-is
