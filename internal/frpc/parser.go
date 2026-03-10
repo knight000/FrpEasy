@@ -52,8 +52,8 @@ var basicProxyFields = map[string]bool{
 	"localPort":                true,
 	"remotePort":               true,
 	"transport":                false,
-	"transport.useEncryption":  false,
-	"transport.useCompression": false,
+	"transport.useEncryption":  true,
+	"transport.useCompression": true,
 }
 
 func isBasicProxyField(key string) bool {
