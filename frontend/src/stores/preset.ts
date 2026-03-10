@@ -18,13 +18,12 @@ import {
   GetLatestFrpcVersion,
   GetCurrentFrpcVersion,
   CompareFrpcVersions,
-  ParseAdvancedConfig,
 } from '../../wailsjs/go/main/App'
 import { models } from '../../wailsjs/go/models'
 import TOML from 'smol-toml'
 import { createServerModel, createServiceModels } from '../helpers/modelConverters'
 import { toSerializableServer, toSerializableService } from '../helpers/serializers'
-import { parseAdvancedConfigToBasic, createDefaultService } from '../helpers/serviceParser'
+import { createService } from '../helpers/serviceParser'
 
 export interface LogEntry {
   id: string
@@ -121,16 +120,11 @@ const loadFromStorage = async (): Promise<Preset[]> => {
             uptime: 0,
             status: 'offline',
           })),
-          services: (p.services || []).map((s: Service) => {
-            const service = {
-              ...createDefaultService(),
-              ...s,
-            }
-            if (service.is_advanced) {
-              parseAdvancedConfigToBasic(service)
-            }
-            return service
-          }),
+          services: (p.services || []).map((s: Service) => ({
+            display_ports: '',
+            display_local_ports: '',
+            ...s,
+          })),
         }))
       }
     }
@@ -347,29 +341,34 @@ export const usePresetStore = defineStore('preset', () => {
 
   async function addPreset(name: string, sourcePreset?: Preset) {
     console.log('[AddPreset] Creating preset:', name, { copyFrom: sourcePreset?.name })
-    const newPreset: Preset = sourcePreset
-      ? {
+    
+    let newPreset: Preset
+    if (sourcePreset) {
+      const services = await Promise.all(
+        sourcePreset.services.map((s) => createService(s))
+      )
+      newPreset = {
+        id: generateId(),
+        name,
+        servers: sourcePreset.servers.map((s) => ({
+          ...s,
           id: generateId(),
-          name,
-          servers: sourcePreset.servers.map((s) => ({
-            ...s,
-            id: generateId(),
-            status: 'offline',
-            enabled: false,
-            logs: [],
-            uptime: 0,
-          })),
-          services: sourcePreset.services.map((s) => ({
-            ...s,
-            id: generateId(),
-          })),
-        }
-      : {
-          id: generateId(),
-          name,
-          servers: [createDefaultServer('主服务器')],
-          services: [],
-        }
+          status: 'offline',
+          enabled: false,
+          logs: [],
+          uptime: 0,
+        })),
+        services,
+      }
+    } else {
+      newPreset = {
+        id: generateId(),
+        name,
+        servers: [createDefaultServer('主服务器')],
+        services: [],
+      }
+    }
+    
     presets.value.push(newPreset)
     await saveToStorage(presets.value)
     activePresetId.value = newPreset.id
@@ -423,6 +422,10 @@ export const usePresetStore = defineStore('preset', () => {
         remote_port: s.remote_port,
         use_encryption: s.use_encryption,
         use_compression: s.use_compression,
+        advanced_config: s.advanced_config,
+        is_advanced: s.is_advanced,
+        display_ports: s.display_ports,
+        display_local_ports: s.display_local_ports,
       })),
     }
     localStorage.setItem(CLIPBOARD_KEY, JSON.stringify(clipboardData))
@@ -432,12 +435,12 @@ export const usePresetStore = defineStore('preset', () => {
     return localStorage.getItem(CLIPBOARD_KEY) !== null
   }
 
-  function pastePreset(name: string): boolean {
+  async function pastePreset(name: string): Promise<boolean> {
     const stored = localStorage.getItem(CLIPBOARD_KEY)
     if (!stored) return false
     try {
       const data = JSON.parse(stored)
-      addPreset(name, data)
+      await addPreset(name, data)
       return true
     } catch {
       return false
@@ -600,6 +603,20 @@ export const usePresetStore = defineStore('preset', () => {
       if (!tomlStr) return null
       
       const data = TOML.parse(tomlStr) as any
+      const services = await Promise.all(
+        (data.services || []).map((s: any) => createService({
+          name: s.name,
+          protocol: s.protocol,
+          local_ip: s.local_ip,
+          local_port: s.local_port,
+          remote_port: s.remote_port,
+          use_encryption: s.use_encryption ?? false,
+          use_compression: s.use_compression ?? false,
+          advanced_config: s.advanced_config ?? '',
+          is_advanced: s.is_advanced ?? false,
+        }))
+      )
+      
       return {
         id: generateId(),
         name: data.name || '导入的预设',
@@ -615,25 +632,7 @@ export const usePresetStore = defineStore('preset', () => {
           logs: [],
           uptime: 0,
         })),
-        services: (data.services || []).map((s: any) => {
-          const service = {
-            ...createDefaultService(),
-            id: generateId(),
-            name: s.name,
-            protocol: s.protocol,
-            local_ip: s.local_ip,
-            local_port: s.local_port,
-            remote_port: s.remote_port,
-            use_encryption: s.use_encryption ?? false,
-            use_compression: s.use_compression ?? false,
-            advanced_config: s.advanced_config ?? '',
-            is_advanced: s.is_advanced ?? false,
-          }
-          if (service.is_advanced) {
-            parseAdvancedConfigToBasic(service)
-          }
-          return service
-        }),
+        services,
       }
     } catch (e) {
       console.error('[ImportPresetToml] Failed:', e)
@@ -679,34 +678,6 @@ export const usePresetStore = defineStore('preset', () => {
     activeServerId.value = preset.servers[0]?.id || null
   }
 
-  async function parseAdvancedConfigService(service: Service): Promise<void> {
-    if (!service.advanced_config) return
-
-    if (service.advanced_config.includes('{{') && service.advanced_config.includes('}}')) {
-      try {
-        const result = await ParseAdvancedConfig(service.advanced_config)
-        if (result) {
-          service.name = result.NamePattern
-          service.protocol = result.Protocol
-          service.display_ports = result.RemotePorts
-          service.display_local_ports = result.LocalPorts
-          service.local_ip = '127.0.0.1'
-          service.local_port = 0
-        }
-      } catch (e) {
-        console.warn('[ParseAdvancedConfig] Failed:', e)
-      }
-    } else {
-      const success = parseAdvancedConfigToBasic(service)
-      if (success) {
-        service.is_advanced = false
-        service.advanced_config = ''
-      }
-      service.display_ports = ''
-      service.display_local_ports = ''
-    }
-  }
-
   async function mergePresets(presetIds: string[], newName: string): Promise<boolean> {
     console.log('[MergePresets] Merging presets:', presetIds, 'into:', newName)
     
@@ -723,6 +694,7 @@ export const usePresetStore = defineStore('preset', () => {
     }
 
     const serviceKeySet = new Set<string>()
+    const servicesToCreate: Service[] = []
 
     for (const presetId of presetIds) {
       const preset = presets.value.find(p => p.id === presetId)
@@ -749,11 +721,7 @@ export const usePresetStore = defineStore('preset', () => {
         }
         
         serviceKeySet.add(serviceKey)
-        
-        mergedPreset.services.push({
-          ...service,
-          id: generateId(),
-        })
+        servicesToCreate.push(service)
       }
     }
 
@@ -761,6 +729,10 @@ export const usePresetStore = defineStore('preset', () => {
       console.error('[MergePresets] No servers found in selected presets')
       return false
     }
+
+    mergedPreset.services = await Promise.all(
+      servicesToCreate.map((s) => createService(s))
+    )
 
     presets.value.push(mergedPreset)
     await saveToStorage(presets.value)
@@ -853,7 +825,6 @@ export const usePresetStore = defineStore('preset', () => {
     getLatestFrpcVersion,
     getCurrentFrpcVersion,
     compareFrpcVersions,
-    parseAdvancedConfigService,
     downloadedVersion,
     versionFetchError,
   }

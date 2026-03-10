@@ -26,17 +26,30 @@ type LogEntry struct {
 }
 
 type Service struct {
-	ID             string          `json:"id" toml:"id"`
-	Name           string          `json:"name" toml:"name"`
-	Protocol       ServiceProtocol `json:"protocol" toml:"protocol"`
-	LocalIP        string          `json:"local_ip" toml:"local_ip"`
-	LocalPort      int             `json:"local_port" toml:"local_port"`
-	RemotePort     int             `json:"remote_port" toml:"remote_port"`
-	UseEncryption  bool            `json:"use_encryption" toml:"use_encryption"`
-	UseCompression bool            `json:"use_compression" toml:"use_compression"`
-	AdvancedConfig string          `json:"advanced_config" toml:"advanced_config"`
-	IsAdvanced     bool            `json:"is_advanced" toml:"is_advanced"`
-	DisplayPorts   string          `json:"display_ports,omitempty" toml:"display_ports,omitempty"`
+	ID                string          `json:"id" toml:"id"`
+	Name              string          `json:"name" toml:"name"`
+	Protocol          ServiceProtocol `json:"protocol" toml:"protocol"`
+	LocalIP           string          `json:"local_ip" toml:"local_ip"`
+	LocalPort         int             `json:"local_port" toml:"local_port"`
+	RemotePort        int             `json:"remote_port" toml:"remote_port"`
+	UseEncryption     bool            `json:"use_encryption" toml:"use_encryption"`
+	UseCompression    bool            `json:"use_compression" toml:"use_compression"`
+	AdvancedConfig    string          `json:"advanced_config" toml:"advanced_config"`
+	IsAdvanced        bool            `json:"is_advanced" toml:"is_advanced"`
+	DisplayPorts      string          `json:"display_ports,omitempty" toml:"display_ports,omitempty"`
+	DisplayLocalPorts string          `json:"display_local_ports,omitempty" toml:"display_local_ports,omitempty"`
+}
+
+type ServiceInput struct {
+	Name           string          `json:"name"`
+	Protocol       ServiceProtocol `json:"protocol"`
+	LocalIP        string          `json:"local_ip"`
+	LocalPort      int             `json:"local_port"`
+	RemotePort     int             `json:"remote_port"`
+	UseEncryption  bool            `json:"use_encryption"`
+	UseCompression bool            `json:"use_compression"`
+	AdvancedConfig string          `json:"advanced_config"`
+	IsAdvanced     bool            `json:"is_advanced"`
 }
 
 type Server struct {

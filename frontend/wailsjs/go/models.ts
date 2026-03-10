@@ -37,6 +37,7 @@ export namespace models {
 	    advanced_config: string;
 	    is_advanced: boolean;
 	    display_ports?: string;
+	    display_local_ports?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Service(source);
@@ -55,6 +56,7 @@ export namespace models {
 	        this.advanced_config = source["advanced_config"];
 	        this.is_advanced = source["is_advanced"];
 	        this.display_ports = source["display_ports"];
+	        this.display_local_ports = source["display_local_ports"];
 	    }
 	}
 	export class LogEntry {
@@ -208,6 +210,35 @@ export namespace models {
 	        this.server_id = source["server_id"];
 	        this.process_pid = source["process_pid"];
 	        this.config_path = source["config_path"];
+	    }
+	}
+	
+	export class ServiceInput {
+	    name: string;
+	    protocol: string;
+	    local_ip: string;
+	    local_port: number;
+	    remote_port: number;
+	    use_encryption: boolean;
+	    use_compression: boolean;
+	    advanced_config: string;
+	    is_advanced: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new ServiceInput(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.protocol = source["protocol"];
+	        this.local_ip = source["local_ip"];
+	        this.local_port = source["local_port"];
+	        this.remote_port = source["remote_port"];
+	        this.use_encryption = source["use_encryption"];
+	        this.use_compression = source["use_compression"];
+	        this.advanced_config = source["advanced_config"];
+	        this.is_advanced = source["is_advanced"];
 	    }
 	}
 

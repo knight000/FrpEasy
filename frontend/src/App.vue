@@ -809,7 +809,7 @@ import TOML from 'smol-toml'
 import { getStatusDotClass, getStatusChipColor, getStatusText } from '@/composables/useStatus'
 import { useSnackbar } from '@/composables/useSnackbar'
 import { useDownloadSource } from '@/composables/useDownloadSource'
-import { parseAdvancedConfigToBasic } from '@/helpers/serviceParser'
+import { createService } from '@/helpers/serviceParser'
 
 const store = usePresetStore()
 const { snackbar, showSnackbar } = useSnackbar()
@@ -941,8 +941,8 @@ function handleCopyPreset(id: string) {
   showSnackbar('预设已复制到剪贴板')
 }
 
-function handlePastePreset() {
-  if (store.pastePreset('新建预设 (副本)')) {
+async function handlePastePreset() {
+  if (await store.pastePreset('新建预设 (副本)')) {
     showSnackbar('预设已粘贴')
   }
 }
@@ -1073,19 +1073,14 @@ function openEditServices() {
   servicesDialog.value = true
 }
 
-function addService() {
-  editingServices.value.push({
-    id: Math.random().toString(36).substring(2, 9),
+async function addService() {
+  const service = await createService({
     name: `服务 ${editingServices.value.length + 1}`,
-    protocol: 'TCP',
+    local_ip: '127.0.0.1',
     local_port: 8080,
     remote_port: 9000,
-    local_ip: '127.0.0.1',
-    use_encryption: false,
-    use_compression: false,
-    advanced_config: '',
-    is_advanced: false
   })
+  editingServices.value.push(service)
   expandedServicePanel.value = editingServices.value.length - 1
 }
 
@@ -1113,13 +1108,11 @@ function getAdvancedConfigHint(service: Service): string {
 async function saveServices() {
   if (!store.activePreset) return
   
-  for (const service of editingServices.value) {
-    if (service.is_advanced && service.advanced_config) {
-      await store.parseAdvancedConfigService(service)
-    }
-  }
+  const normalizedServices = await Promise.all(
+    editingServices.value.map((s) => createService(s))
+  )
   
-  store.updatePreset(store.activePreset.id, { services: JSON.parse(JSON.stringify(editingServices.value)) })
+  store.updatePreset(store.activePreset.id, { services: normalizedServices })
   servicesDialog.value = false
   showSnackbar('服务规则已保存')
 }

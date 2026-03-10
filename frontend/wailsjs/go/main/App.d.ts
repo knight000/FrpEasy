@@ -39,6 +39,8 @@ export function IsServerRunning(arg1:string,arg2:string):Promise<boolean>;
 
 export function LoadAppConfig():Promise<string>;
 
+export function NormalizeService(arg1:models.ServiceInput):Promise<models.Service>;
+
 export function ParseAdvancedConfig(arg1:string):Promise<frpc.TemplateDisplayInfo>;
 
 export function SaveAppConfig(arg1:string):Promise<void>;

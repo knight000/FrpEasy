@@ -472,6 +472,54 @@ func ParseFrpConfigFile(filePath string) (*FrpConfig, error) {
 	}
 }
 
+func ParseSingleProxy(advancedConfig string) *ProxyConfig {
+	var raw map[string]interface{}
+	if err := toml.Unmarshal([]byte(advancedConfig), &raw); err != nil {
+		return nil
+	}
+
+	proxies, ok := raw["proxies"].([]interface{})
+	if !ok || len(proxies) == 0 {
+		return nil
+	}
+
+	proxy, ok := proxies[0].(map[string]interface{})
+	if !ok {
+		return nil
+	}
+
+	proxyConfig := &ProxyConfig{
+		LocalIP: "127.0.0.1",
+	}
+
+	if v := getMapStringCI(proxy, "name"); v != "" {
+		proxyConfig.Name = v
+	}
+	if v := getMapStringCI(proxy, "type"); v != "" {
+		proxyConfig.Type = v
+	}
+	if v := getMapStringCI(proxy, "localIP"); v != "" {
+		proxyConfig.LocalIP = v
+	}
+	if v := getMapIntCI(proxy, "localPort"); v != 0 {
+		proxyConfig.LocalPort = int(v)
+	}
+	if v := getMapIntCI(proxy, "remotePort"); v != 0 {
+		proxyConfig.RemotePort = int(v)
+	}
+
+	if transport := getMapMapCI(proxy, "transport"); transport != nil {
+		if v := getMapBoolCI(transport, "useEncryption"); v {
+			proxyConfig.UseEncryption = v
+		}
+		if v := getMapBoolCI(transport, "useCompression"); v {
+			proxyConfig.UseCompression = v
+		}
+	}
+
+	return proxyConfig
+}
+
 func ConvertToModels(config *FrpConfig, presetName string) (*models.Preset, error) {
 	preset := &models.Preset{
 		ID:       generateID(),

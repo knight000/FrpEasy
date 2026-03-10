@@ -13,6 +13,7 @@ import (
 	"frpeasy/internal/frpc"
 	"frpeasy/internal/models"
 
+	"github.com/google/uuid"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
@@ -337,6 +338,53 @@ func (a *App) GetCurrentFrpcVersion() string {
 
 func (a *App) CompareFrpcVersions(v1, v2 string) int {
 	return frpc.CompareVersions(v1, v2)
+}
+
+func (a *App) NormalizeService(input models.ServiceInput) models.Service {
+	id := uuid.New().String()[:8]
+
+	service := models.Service{
+		ID:             id,
+		Name:           input.Name,
+		Protocol:       input.Protocol,
+		LocalIP:        input.LocalIP,
+		LocalPort:      input.LocalPort,
+		RemotePort:     input.RemotePort,
+		UseEncryption:  input.UseEncryption,
+		UseCompression: input.UseCompression,
+		AdvancedConfig: input.AdvancedConfig,
+		IsAdvanced:     input.IsAdvanced,
+	}
+
+	if input.IsAdvanced && input.AdvancedConfig != "" {
+		if frpc.ContainsGoTemplate(input.AdvancedConfig) {
+			displayInfo, err := frpc.ParseGoTemplateBlock(input.AdvancedConfig)
+			if err == nil {
+				service.Name = displayInfo.NamePattern
+				service.Protocol = models.ServiceProtocol(displayInfo.Protocol)
+				service.DisplayPorts = displayInfo.RemotePorts
+				service.DisplayLocalPorts = displayInfo.LocalPorts
+				service.LocalIP = "127.0.0.1"
+				service.LocalPort = 0
+				service.RemotePort = 0
+			}
+		} else {
+			proxy := frpc.ParseSingleProxy(input.AdvancedConfig)
+			if proxy != nil {
+				service.Name = proxy.Name
+				service.Protocol = models.ServiceProtocol(strings.ToUpper(proxy.Type))
+				service.LocalIP = proxy.LocalIP
+				service.LocalPort = proxy.LocalPort
+				service.RemotePort = proxy.RemotePort
+				service.UseEncryption = proxy.UseEncryption
+				service.UseCompression = proxy.UseCompression
+				service.IsAdvanced = false
+				service.AdvancedConfig = ""
+			}
+		}
+	}
+
+	return service
 }
 
 func (a *App) ParseAdvancedConfig(config string) *frpc.TemplateDisplayInfo {

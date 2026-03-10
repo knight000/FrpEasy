@@ -74,6 +74,10 @@ export function LoadAppConfig() {
   return window['go']['main']['App']['LoadAppConfig']();
 }
 
+export function NormalizeService(arg1) {
+  return window['go']['main']['App']['NormalizeService'](arg1);
+}
+
 export function ParseAdvancedConfig(arg1) {
   return window['go']['main']['App']['ParseAdvancedConfig'](arg1);
 }
