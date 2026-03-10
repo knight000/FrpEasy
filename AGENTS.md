@@ -223,7 +223,7 @@ useSnackbar(): { snackbar, showSnackbar, showSuccess, showError, showInfo, showW
 ## Code Optimization TODO
 
 ### High Priority
-- [ ] Unify struct definitions in config package and models package
+- [x] Unify struct definitions in config package and models package
 
 ### Medium Priority
 - [ ] Extract generic confirm dialog component
@@ -239,11 +239,7 @@ useSnackbar(): { snackbar, showSnackbar, showSuccess, showError, showInfo, showW
 - `frontend/src/helpers/serializers.ts` - Data serialization utilities
 - `frontend/src/composables/useStatus.ts` - Status mapping composable
 - `frontend/src/composables/useSnackbar.ts` - Snackbar utilities
-
-### Pending Refactoring
-
-- [ ] Update App.vue to use useSnackbar composable (partially done)
-- [ ] Simplify LogConsole.vue copy function wrappers
+- `internal/config/config.go` - Added conversion functions between config and models
 
 ## Completed Optimizations
 
@@ -257,3 +253,5 @@ useSnackbar(): { snackbar, showSnackbar, showSuccess, showError, showInfo, showW
 - [x] Updated App.vue to use useStatus composable
 - [x] Updated PresetSidebar.vue to use shared status functions
 - [x] Replaced snackbar patterns with useSnackbar composable in App.vue
+- [x] Unified config and models package struct definitions with conversion functions
+- [x] Simplified LogConsole.vue copy function wrappers

@@ -41,7 +41,7 @@
             icon="mdi-content-copy"
             size="small"
             variant="text"
-            @click="copyLogs"
+            @click="handleCopyAll"
           />
         </template>
       </v-tooltip>
@@ -216,14 +216,6 @@ function formatTime(timestamp: number): string {
   return d.toLocaleTimeString('zh-CN', { hour12: false })
 }
 
-function copyLogs() {
-  const logsToCopy = searchQuery.value ? filteredLogs.value : props.logs
-  const text = logsToCopy
-    .map((l) => `[${formatTime(l.timestamp)}] ${l.type.toUpperCase()} ${l.message}`)
-    .join('\n')
-  navigator.clipboard.writeText(text)
-}
-
 function onContextMenu(e: MouseEvent) {
   const selection = window.getSelection()
   selectedText.value = selection ? selection.toString() : ''
@@ -232,23 +224,19 @@ function onContextMenu(e: MouseEvent) {
   showContextMenu.value = true
 }
 
-function copySelectedText() {
+function handleCopySelected() {
   if (selectedText.value) {
     navigator.clipboard.writeText(selectedText.value)
   }
-}
-
-function copyAllLogs() {
-  copyLogs()
-}
-
-function handleCopySelected() {
-  copySelectedText()
   showContextMenu.value = false
 }
 
 function handleCopyAll() {
-  copyAllLogs()
+  const logsToCopy = searchQuery.value ? filteredLogs.value : props.logs
+  const text = logsToCopy
+    .map((l) => `[${formatTime(l.timestamp)}] ${l.type.toUpperCase()} ${l.message}`)
+    .join('\n')
+  navigator.clipboard.writeText(text)
   showContextMenu.value = false
 }
 

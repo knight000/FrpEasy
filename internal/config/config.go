@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 
+	"frpeasy/internal/models"
+
 	"github.com/pelletier/go-toml/v2"
 )
 
@@ -76,4 +78,91 @@ func ToTomlString(config *AppConfig) (string, error) {
 		return "", fmt.Errorf("failed to marshal config: %w", err)
 	}
 	return string(data), nil
+}
+
+func ServerConfigFromModel(s models.Server) ServerConfig {
+	return ServerConfig{
+		ID:      s.ID,
+		Name:    s.Name,
+		Address: s.Address,
+		Port:    s.Port,
+		Token:   s.Token,
+		Enabled: s.Enabled,
+	}
+}
+
+func ServiceConfigFromModel(s models.Service) ServiceConfig {
+	return ServiceConfig{
+		ID:             s.ID,
+		Name:           s.Name,
+		Protocol:       string(s.Protocol),
+		LocalIP:        s.LocalIP,
+		LocalPort:      s.LocalPort,
+		RemotePort:     s.RemotePort,
+		UseEncryption:  s.UseEncryption,
+		UseCompression: s.UseCompression,
+		AdvancedConfig: s.AdvancedConfig,
+		IsAdvanced:     s.IsAdvanced,
+	}
+}
+
+func PresetConfigFromModel(p models.Preset) PresetConfig {
+	servers := make([]ServerConfig, len(p.Servers))
+	for i, s := range p.Servers {
+		servers[i] = ServerConfigFromModel(s)
+	}
+	services := make([]ServiceConfig, len(p.Services))
+	for i, s := range p.Services {
+		services[i] = ServiceConfigFromModel(s)
+	}
+	return PresetConfig{
+		ID:       p.ID,
+		Name:     p.Name,
+		Servers:  servers,
+		Services: services,
+	}
+}
+
+func (s ServerConfig) ToModel() models.Server {
+	return models.Server{
+		ID:      s.ID,
+		Name:    s.Name,
+		Address: s.Address,
+		Port:    s.Port,
+		Token:   s.Token,
+		Enabled: s.Enabled,
+		Status:  models.StatusOffline,
+	}
+}
+
+func (s ServiceConfig) ToModel() models.Service {
+	return models.Service{
+		ID:             s.ID,
+		Name:           s.Name,
+		Protocol:       models.ServiceProtocol(s.Protocol),
+		LocalIP:        s.LocalIP,
+		LocalPort:      s.LocalPort,
+		RemotePort:     s.RemotePort,
+		UseEncryption:  s.UseEncryption,
+		UseCompression: s.UseCompression,
+		AdvancedConfig: s.AdvancedConfig,
+		IsAdvanced:     s.IsAdvanced,
+	}
+}
+
+func (p PresetConfig) ToModel() models.Preset {
+	servers := make([]models.Server, len(p.Servers))
+	for i, s := range p.Servers {
+		servers[i] = s.ToModel()
+	}
+	services := make([]models.Service, len(p.Services))
+	for i, s := range p.Services {
+		services[i] = s.ToModel()
+	}
+	return models.Preset{
+		ID:       p.ID,
+		Name:     p.Name,
+		Servers:  servers,
+		Services: services,
+	}
 }

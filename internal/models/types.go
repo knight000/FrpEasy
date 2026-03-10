@@ -26,35 +26,35 @@ type LogEntry struct {
 }
 
 type Service struct {
-	ID             string          `json:"id"`
-	Name           string          `json:"name"`
-	Protocol       ServiceProtocol `json:"protocol"`
-	LocalIP        string          `json:"local_ip"`
-	LocalPort      int             `json:"local_port"`
-	RemotePort     int             `json:"remote_port"`
-	UseEncryption  bool            `json:"use_encryption"`
-	UseCompression bool            `json:"use_compression"`
-	AdvancedConfig string          `json:"advanced_config"`
-	IsAdvanced     bool            `json:"is_advanced"`
+	ID             string          `json:"id" toml:"id"`
+	Name           string          `json:"name" toml:"name"`
+	Protocol       ServiceProtocol `json:"protocol" toml:"protocol"`
+	LocalIP        string          `json:"local_ip" toml:"local_ip"`
+	LocalPort      int             `json:"local_port" toml:"local_port"`
+	RemotePort     int             `json:"remote_port" toml:"remote_port"`
+	UseEncryption  bool            `json:"use_encryption" toml:"use_encryption"`
+	UseCompression bool            `json:"use_compression" toml:"use_compression"`
+	AdvancedConfig string          `json:"advanced_config" toml:"advanced_config"`
+	IsAdvanced     bool            `json:"is_advanced" toml:"is_advanced"`
 }
 
 type Server struct {
-	ID      string       `json:"id"`
-	Name    string       `json:"name"`
-	Address string       `json:"address"`
-	Port    int          `json:"port"`
-	Token   string       `json:"token"`
-	Status  ServerStatus `json:"status"`
-	Enabled bool         `json:"enabled"`
-	Logs    []LogEntry   `json:"logs"`
-	Uptime  int          `json:"uptime"`
+	ID      string       `json:"id" toml:"id"`
+	Name    string       `json:"name" toml:"name"`
+	Address string       `json:"address" toml:"address"`
+	Port    int          `json:"port" toml:"port"`
+	Token   string       `json:"token" toml:"token"`
+	Status  ServerStatus `json:"status" toml:"status"`
+	Enabled bool         `json:"enabled" toml:"enabled"`
+	Logs    []LogEntry   `json:"logs" toml:"logs"`
+	Uptime  int          `json:"uptime" toml:"uptime"`
 }
 
 type Preset struct {
-	ID       string    `json:"id"`
-	Name     string    `json:"name"`
-	Servers  []Server  `json:"servers"`
-	Services []Service `json:"services"`
+	ID       string    `json:"id" toml:"id"`
+	Name     string    `json:"name" toml:"name"`
+	Servers  []Server  `json:"servers" toml:"servers"`
+	Services []Service `json:"services" toml:"services"`
 }
 
 type DownloadProgress struct {
