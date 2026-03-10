@@ -630,6 +630,8 @@ export const usePresetStore = defineStore('preset', () => {
         remote_port: s.remote_port,
         use_encryption: s.use_encryption,
         use_compression: s.use_compression,
+        advanced_config: s.advanced_config,
+        is_advanced: s.is_advanced,
       })))
 
       return await ExportPresetAsTomlBatch(serversJson, servicesJson, preset.name)
