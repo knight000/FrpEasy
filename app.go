@@ -80,7 +80,7 @@ func (a *App) IsFrpcDownloaded() bool {
 	return frpc.IsFrpcDownloaded(filepath.Join(a.dataDir, "bin"))
 }
 
-func (a *App) DownloadFrpc(source string) {
+func (a *App) DownloadFrpc(source string, useDefault bool) {
 	go func() {
 		var downloadSource frpc.DownloadSource
 		switch source {
@@ -94,16 +94,29 @@ func (a *App) DownloadFrpc(source string) {
 			downloadSource = frpc.SourceGHProxy
 		}
 
-		err := frpc.DownloadFrpc(filepath.Join(a.dataDir, "bin"), downloadSource, func(progress models.DownloadProgress) {
+		version, err := frpc.DownloadFrpc(filepath.Join(a.dataDir, "bin"), downloadSource, useDefault, func(progress models.DownloadProgress) {
 			runtime.EventsEmit(a.ctx, "download:progress", progress)
 		})
 
 		if err != nil {
+			if strings.Contains(err.Error(), "无法获取最新版本") {
+				runtime.EventsEmit(a.ctx, "download:progress", models.DownloadProgress{
+					IsError:           true,
+					VersionFetchError: "无法获取最新版本，请检查网络连接",
+				})
+				return
+			}
 			runtime.EventsEmit(a.ctx, "download:progress", models.DownloadProgress{
 				IsError:      true,
 				ErrorMessage: err.Error(),
 			})
+			return
 		}
+
+		runtime.EventsEmit(a.ctx, "download:progress", models.DownloadProgress{
+			IsComplete:        true,
+			DownloadedVersion: version,
+		})
 	}()
 }
 

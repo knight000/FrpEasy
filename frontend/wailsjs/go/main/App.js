@@ -6,8 +6,8 @@ export function CompareFrpcVersions(arg1, arg2) {
   return window['go']['main']['App']['CompareFrpcVersions'](arg1, arg2);
 }
 
-export function DownloadFrpc(arg1) {
-  return window['go']['main']['App']['DownloadFrpc'](arg1);
+export function DownloadFrpc(arg1, arg2) {
+  return window['go']['main']['App']['DownloadFrpc'](arg1, arg2);
 }
 
 export function ExportPresetAsTomlBatch(arg1, arg2, arg3) {

@@ -5,7 +5,7 @@ import {main} from '../models';
 
 export function CompareFrpcVersions(arg1:string,arg2:string):Promise<number>;
 
-export function DownloadFrpc(arg1:string):Promise<void>;
+export function DownloadFrpc(arg1:string,arg2:boolean):Promise<void>;
 
 export function ExportPresetAsTomlBatch(arg1:string,arg2:string,arg3:string):Promise<string>;
 

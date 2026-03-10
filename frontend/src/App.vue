@@ -465,6 +465,26 @@
               下载源: {{ getSourceLabel(downloadSource) }}
             </div>
           </template>
+          <template v-else-if="store.versionFetchError">
+            <v-alert type="warning" variant="tonal" class="mb-4">
+              {{ store.versionFetchError }}
+            </v-alert>
+            <div class="text-center">
+              是否使用默认版本 v0.61.1 下载？
+            </div>
+            <div class="mt-4">
+              <div class="text-subtitle-2 mb-2">切换下载源:</div>
+              <v-select
+                v-model="downloadSource"
+                :items="downloadSources"
+                item-title="label"
+                item-value="value"
+                density="compact"
+                variant="outlined"
+                hide-details
+              />
+            </div>
+          </template>
           <template v-else-if="store.downloadProgress?.is_error">
             <v-alert type="error" variant="tonal" class="mb-4">
               {{ store.downloadProgress?.error_message || '下载失败' }}
@@ -480,6 +500,13 @@
                 variant="outlined"
                 hide-details
               />
+            </div>
+          </template>
+          <template v-else-if="store.downloadProgress?.is_complete">
+            <div class="text-center pa-4">
+              <v-icon size="64" color="success">mdi-check-circle</v-icon>
+              <div class="text-h6 mt-4">下载完成</div>
+              <div class="text-grey mt-2">frpc v{{ store.downloadedVersion }} 已安装</div>
             </div>
           </template>
           <template v-else>
@@ -504,29 +531,42 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn
-            v-if="!store.isDownloading"
-            variant="text"
-            @click="downloadDialog = false"
-          >
-            取消
-          </v-btn>
-          <v-btn
-            v-if="store.downloadProgress?.is_error"
-            color="primary"
-            variant="flat"
-            @click="startDownload"
-          >
-            重试
-          </v-btn>
-          <v-btn
-            v-else-if="!store.isDownloading"
-            color="primary"
-            variant="flat"
-            @click="startDownload"
-          >
-            开始下载
-          </v-btn>
+          <template v-if="store.versionFetchError">
+            <v-btn variant="text" @click="downloadDialog = false">取消</v-btn>
+            <v-btn color="primary" variant="flat" @click="startDownloadWithDefault">
+              下载默认版本
+            </v-btn>
+          </template>
+          <template v-else-if="store.downloadProgress?.is_complete">
+            <v-btn color="primary" variant="flat" @click="closeDownloadDialog">
+              完成
+            </v-btn>
+          </template>
+          <template v-else>
+            <v-btn
+              v-if="!store.isDownloading"
+              variant="text"
+              @click="downloadDialog = false"
+            >
+              取消
+            </v-btn>
+            <v-btn
+              v-if="store.downloadProgress?.is_error"
+              color="primary"
+              variant="flat"
+              @click="startDownload"
+            >
+              重试
+            </v-btn>
+            <v-btn
+              v-else-if="!store.isDownloading"
+              color="primary"
+              variant="flat"
+              @click="startDownload"
+            >
+              开始下载
+            </v-btn>
+          </template>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -874,6 +914,19 @@ function toggleServer(serverId: string) {
 
 function startDownload() {
   store.startDownloadFrpc(downloadSource.value)
+}
+
+function startDownloadWithDefault() {
+  store.startDownloadFrpcWithDefault(downloadSource.value)
+}
+
+async function closeDownloadDialog() {
+  downloadDialog.value = false
+  if (aboutDialog.value) {
+    currentFrpcVersion.value = await store.getCurrentFrpcVersion()
+    hasFrpcUpdate.value = false
+    latestFrpcVersion.value = ''
+  }
 }
 
 function handleClearLogs(serverId: string) {

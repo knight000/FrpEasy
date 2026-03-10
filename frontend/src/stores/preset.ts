@@ -65,7 +65,9 @@ export interface DownloadProgress {
   percentage: number
   is_complete: boolean
   is_error: boolean
-  error_message: string
+  error_message?: string
+  downloaded_version?: string
+  version_fetch_error?: string
 }
 
 export type DownloadSource = 'github' | 'ghproxy' | 'fastgit' | 'moeyy'
@@ -160,6 +162,8 @@ export const usePresetStore = defineStore('preset', () => {
   const frpcVersion = ref('')
   const downloadProgress = ref<DownloadProgress | null>(null)
   const isDownloading = ref(false)
+  const downloadedVersion = ref('')
+  const versionFetchError = ref('')
 
   const activePreset = computed(() =>
     presets.value.find((p) => p.id === activePresetId.value)
@@ -211,26 +215,64 @@ export const usePresetStore = defineStore('preset', () => {
     if (isDownloading.value) return
     isDownloading.value = true
     downloadProgress.value = null
+    downloadedVersion.value = ''
+    versionFetchError.value = ''
     console.log('[DownloadFrpc] Starting download with source:', source)
 
     EventsOn('download:progress', (progress: DownloadProgress) => {
       downloadProgress.value = progress
       console.log('[DownloadFrpc] Progress:', progress.percentage.toFixed(1) + '%')
-      if (progress.is_complete || progress.is_error) {
+      if (progress.is_complete) {
         isDownloading.value = false
-        if (progress.is_complete) {
-          console.log('[DownloadFrpc] Download completed')
-          frpcDownloaded.value = true
-          initFrpc()
-        }
-        if (progress.is_error) {
-          console.error('[DownloadFrpc] Download failed:', progress.error_message)
-        }
+        downloadedVersion.value = progress.downloaded_version || ''
+        console.log('[DownloadFrpc] Download completed, version:', downloadedVersion.value)
+        frpcDownloaded.value = true
+        initFrpc()
+      }
+      if (progress.version_fetch_error) {
+        isDownloading.value = false
+        versionFetchError.value = progress.version_fetch_error
+        console.error('[DownloadFrpc] Version fetch error:', progress.version_fetch_error)
+      }
+      if (progress.is_error && !progress.version_fetch_error) {
+        isDownloading.value = false
+        console.error('[DownloadFrpc] Download failed:', progress.error_message)
       }
     })
 
     try {
-      await DownloadFrpc(source)
+      await DownloadFrpc(source, false)
+    } catch (e) {
+      console.error('[DownloadFrpc] Download failed:', e)
+      isDownloading.value = false
+    }
+  }
+
+  async function startDownloadFrpcWithDefault(source: DownloadSource = 'ghproxy') {
+    if (isDownloading.value) return
+    isDownloading.value = true
+    downloadProgress.value = null
+    versionFetchError.value = ''
+    console.log('[DownloadFrpc] Starting download with default version, source:', source)
+
+    EventsOn('download:progress', (progress: DownloadProgress) => {
+      downloadProgress.value = progress
+      console.log('[DownloadFrpc] Progress:', progress.percentage.toFixed(1) + '%')
+      if (progress.is_complete) {
+        isDownloading.value = false
+        downloadedVersion.value = progress.downloaded_version || ''
+        console.log('[DownloadFrpc] Download completed, version:', downloadedVersion.value)
+        frpcDownloaded.value = true
+        initFrpc()
+      }
+      if (progress.is_error) {
+        isDownloading.value = false
+        console.error('[DownloadFrpc] Download failed:', progress.error_message)
+      }
+    })
+
+    try {
+      await DownloadFrpc(source, true)
     } catch (e) {
       console.error('[DownloadFrpc] Download failed:', e)
       isDownloading.value = false
@@ -840,5 +882,8 @@ export const usePresetStore = defineStore('preset', () => {
     getLatestFrpcVersion,
     getCurrentFrpcVersion,
     compareFrpcVersions,
+    downloadedVersion,
+    versionFetchError,
+    startDownloadFrpcWithDefault,
   }
 })

@@ -56,12 +56,14 @@ type Preset struct {
 }
 
 type DownloadProgress struct {
-	TotalBytes   int64   `json:"total_bytes"`
-	Downloaded   int64   `json:"downloaded"`
-	Percentage   float64 `json:"percentage"`
-	IsComplete   bool    `json:"is_complete"`
-	IsError      bool    `json:"is_error"`
-	ErrorMessage string  `json:"error_message"`
+	TotalBytes        int64   `json:"total_bytes"`
+	Downloaded        int64   `json:"downloaded"`
+	Percentage        float64 `json:"percentage"`
+	IsComplete        bool    `json:"is_complete"`
+	IsError           bool    `json:"is_error"`
+	ErrorMessage      string  `json:"error_message,omitempty"`
+	DownloadedVersion string  `json:"downloaded_version,omitempty"`
+	VersionFetchError string  `json:"version_fetch_error,omitempty"`
 }
 
 type ServerRuntime struct {

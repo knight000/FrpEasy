@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	FrpcVersion = "0.61.1"
+	DefaultFrpcVersion = "0.61.1"
 )
 
 type DownloadSource string
@@ -28,20 +28,20 @@ const (
 	SourceMoeyy   DownloadSource = "moeyy"
 )
 
-func GetDownloadURL(source DownloadSource) string {
-	filename := GetFrpcFilename()
+func GetDownloadURL(source DownloadSource, version string) string {
+	filename := GetFrpcFilename(version)
 	ext := ".zip"
 	if runtime.GOOS != "windows" {
 		ext = ".tar.gz"
 	}
 
-	githubURL := fmt.Sprintf("https://github.com/fatedier/frp/releases/download/v%s/%s%s", FrpcVersion, filename, ext)
+	githubURL := fmt.Sprintf("https://github.com/fatedier/frp/releases/download/v%s/%s%s", version, filename, ext)
 
 	switch source {
 	case SourceGHProxy:
 		return "https://ghproxy.net/" + githubURL
 	case SourceFastGit:
-		return "https://hub.fastgit.xyz/fatedier/frp/releases/download/v" + FrpcVersion + "/" + filename + ext
+		return "https://hub.fastgit.xyz/fatedier/frp/releases/download/v" + version + "/" + filename + ext
 	case SourceMoeyy:
 		return "https://github.moeyy.xyz/" + githubURL
 	default:
@@ -49,7 +49,7 @@ func GetDownloadURL(source DownloadSource) string {
 	}
 }
 
-func GetFrpcFilename() string {
+func GetFrpcFilename(version string) string {
 	goos := runtime.GOOS
 	goarch := runtime.GOARCH
 
@@ -79,7 +79,7 @@ func GetFrpcFilename() string {
 		archName = goarch
 	}
 
-	return fmt.Sprintf("frp_%s_%s_%s", FrpcVersion, osName, archName)
+	return fmt.Sprintf("frp_%s_%s_%s", version, osName, archName)
 }
 
 func GetFrpcExeName() string {
@@ -99,21 +99,33 @@ func IsFrpcDownloaded(binDir string) bool {
 	return err == nil
 }
 
-func DownloadFrpc(binDir string, source DownloadSource, progress func(models.DownloadProgress)) error {
+func DownloadFrpc(binDir string, source DownloadSource, useDefault bool, progress func(models.DownloadProgress)) (string, error) {
 	if err := os.MkdirAll(binDir, 0755); err != nil {
-		return fmt.Errorf("failed to create bin directory: %w", err)
+		return "", fmt.Errorf("failed to create bin directory: %w", err)
 	}
 
-	url := GetDownloadURL(source)
+	var version string
+	var err error
+
+	if useDefault {
+		version = DefaultFrpcVersion
+	} else {
+		version, err = GetLatestFrpcVersion()
+		if err != nil {
+			return "", fmt.Errorf("无法获取最新版本: %w", err)
+		}
+	}
+
+	url := GetDownloadURL(source, version)
 
 	resp, err := http.Get(url)
 	if err != nil {
-		return fmt.Errorf("failed to download frpc: %w", err)
+		return "", fmt.Errorf("failed to download frpc: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to download frpc: HTTP %d", resp.StatusCode)
+		return "", fmt.Errorf("failed to download frpc: HTTP %d", resp.StatusCode)
 	}
 
 	tempFile := filepath.Join(binDir, "frpc_download.tmp")
@@ -125,7 +137,7 @@ func DownloadFrpc(binDir string, source DownloadSource, progress func(models.Dow
 
 	out, err := os.Create(tempFile)
 	if err != nil {
-		return fmt.Errorf("failed to create temp file: %w", err)
+		return "", fmt.Errorf("failed to create temp file: %w", err)
 	}
 	defer out.Close()
 
@@ -138,7 +150,7 @@ func DownloadFrpc(binDir string, source DownloadSource, progress func(models.Dow
 		if n > 0 {
 			if _, writeErr := out.Write(buf[:n]); writeErr != nil {
 				os.Remove(tempFile)
-				return fmt.Errorf("failed to write file: %w", writeErr)
+				return "", fmt.Errorf("failed to write file: %w", writeErr)
 			}
 			downloaded += int64(n)
 			if progress != nil && total > 0 {
@@ -155,7 +167,7 @@ func DownloadFrpc(binDir string, source DownloadSource, progress func(models.Dow
 		}
 		if err != nil {
 			os.Remove(tempFile)
-			return fmt.Errorf("failed to read response: %w", err)
+			return "", fmt.Errorf("failed to read response: %w", err)
 		}
 	}
 
@@ -163,21 +175,22 @@ func DownloadFrpc(binDir string, source DownloadSource, progress func(models.Dow
 
 	if err := extractFrpc(binDir, tempFile); err != nil {
 		os.Remove(tempFile)
-		return fmt.Errorf("failed to extract frpc: %w", err)
+		return "", fmt.Errorf("failed to extract frpc: %w", err)
 	}
 
 	os.Remove(tempFile)
 
 	if progress != nil {
 		progress(models.DownloadProgress{
-			TotalBytes: total,
-			Downloaded: total,
-			Percentage: 100,
-			IsComplete: true,
+			TotalBytes:        total,
+			Downloaded:        total,
+			Percentage:        100,
+			IsComplete:        true,
+			DownloadedVersion: version,
 		})
 	}
 
-	return nil
+	return version, nil
 }
 
 func extractFrpc(binDir, archivePath string) error {
