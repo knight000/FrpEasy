@@ -265,13 +265,34 @@ export const usePresetStore = defineStore('preset', () => {
     EventsOff('server:log')
   }
 
-  function setActivePreset(id: string) {
+  async function setActivePreset(id: string) {
     activePresetId.value = id
     const preset = presets.value.find((p) => p.id === id)
     if (preset && preset.servers.length > 0) {
       activeServerId.value = preset.servers[0].id
     } else {
       activeServerId.value = null
+    }
+
+    if (preset) {
+      await initializeAdvancedServices(preset)
+    }
+  }
+
+  async function initializeAdvancedServices(preset: Preset) {
+    const needsInit = preset.services.some(
+      (s) => s.is_advanced && !s.display_ports && s.advanced_config
+    )
+    if (!needsInit) return
+
+    for (let i = 0; i < preset.services.length; i++) {
+      const s = preset.services[i]
+      if (s.is_advanced && !s.display_ports && s.advanced_config) {
+        const originalId = s.id
+        const updated = await createService(s)
+        updated.id = originalId
+        preset.services[i] = updated
+      }
     }
   }
 
