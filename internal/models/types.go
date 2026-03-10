@@ -74,3 +74,8 @@ type ServerRuntime struct {
 	ProcessPID int    `json:"process_pid"`
 	ConfigPath string `json:"config_path"`
 }
+
+type ImportResult struct {
+	Preset *Preset `json:"preset"`
+	Error  string  `json:"error"`
+}

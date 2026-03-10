@@ -548,23 +548,12 @@ export const usePresetStore = defineStore('preset', () => {
     }
   }
 
-  interface ImportResult {
-    preset?: Preset
-    error?: string
-  }
-
-  async function importFrpFiles(): Promise<ImportResult[]> {
+  async function importFrpFiles(): Promise<models.ImportResult[]> {
     try {
-      const results = await ImportFrpFiles()
-      return results.map((r: any) => {
-        if (r.preset) {
-          return { preset: r.preset as Preset }
-        }
-        return { error: r.error || '未知错误' }
-      })
+      return await ImportFrpFiles()
     } catch (e) {
       console.error('[ImportFrpFiles] Failed:', e)
-      return [{ error: String(e) }]
+      return [{ error: String(e) } as models.ImportResult]
     }
   }
 

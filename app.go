@@ -150,12 +150,7 @@ func (a *App) ExportToml(server models.Server, services []models.Service) string
 	return frpc.GenerateConfig(&server, services)
 }
 
-type ImportResult struct {
-	Preset *models.Preset `json:"preset"`
-	Error  string         `json:"error"`
-}
-
-func (a *App) ImportFrpFiles() []ImportResult {
+func (a *App) ImportFrpFiles() []models.ImportResult {
 	files, err := runtime.OpenMultipleFilesDialog(a.ctx, runtime.OpenDialogOptions{
 		Title: "导入 frp 配置文件",
 		Filters: []runtime.FileFilter{
@@ -166,19 +161,19 @@ func (a *App) ImportFrpFiles() []ImportResult {
 	})
 
 	if err != nil {
-		return []ImportResult{{Error: err.Error()}}
+		return []models.ImportResult{{Error: err.Error()}}
 	}
 
 	if len(files) == 0 {
-		return []ImportResult{}
+		return []models.ImportResult{}
 	}
 
-	var results []ImportResult
+	var results []models.ImportResult
 
 	for _, file := range files {
 		config, err := frpc.ParseFrpConfigFile(file)
 		if err != nil {
-			results = append(results, ImportResult{
+			results = append(results, models.ImportResult{
 				Error: fmt.Sprintf("解析 %s 失败: %s", filepath.Base(file), err.Error()),
 			})
 			continue
@@ -187,13 +182,13 @@ func (a *App) ImportFrpFiles() []ImportResult {
 		presetName := strings.TrimSuffix(filepath.Base(file), filepath.Ext(file))
 		preset, err := frpc.ConvertToModels(config, presetName)
 		if err != nil {
-			results = append(results, ImportResult{
+			results = append(results, models.ImportResult{
 				Error: fmt.Sprintf("转换 %s 失败: %s", filepath.Base(file), err.Error()),
 			})
 			continue
 		}
 
-		results = append(results, ImportResult{Preset: preset})
+		results = append(results, models.ImportResult{Preset: preset})
 	}
 
 	return results

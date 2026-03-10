@@ -341,19 +341,14 @@
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="deletePresetDialog" max-width="400">
-      <v-card>
-        <v-card-title>确认删除预设</v-card-title>
-        <v-card-text>
-          确定要删除预设 "{{ presetToDelete?.name }}" 吗？此操作不可撤销。
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn variant="text" @click="deletePresetDialog = false">取消</v-btn>
-          <v-btn color="error" variant="flat" @click="doDeletePreset">删除</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+    <ConfirmDialog
+      v-model="deletePresetDialog"
+      title="确认删除预设"
+      :message="presetToDelete ? `确定要删除预设 &quot;${presetToDelete.name}&quot; 吗？此操作不可撤销。` : ''"
+      confirm-text="删除"
+      confirm-color="error"
+      @confirm="doDeletePreset"
+    />
 
     <v-dialog v-model="serverDialog" max-width="600">
       <v-card v-if="editingServer">
@@ -559,17 +554,14 @@
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="deleteDialog" max-width="400">
-      <v-card>
-        <v-card-title>确认删除</v-card-title>
-        <v-card-text>确定要删除此服务器吗？此操作不可撤销。</v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn variant="text" @click="deleteDialog = false">取消</v-btn>
-          <v-btn color="error" variant="flat" @click="doDeleteServer">删除</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+    <ConfirmDialog
+      v-model="deleteDialog"
+      title="确认删除"
+      message="确定要删除此服务器吗？此操作不可撤销。"
+      confirm-text="删除"
+      confirm-color="error"
+      @confirm="doDeleteServer"
+    />
 
     <v-dialog v-model="downloadDialog" max-width="500" persistent>
       <v-card>
@@ -601,35 +593,13 @@
             <div class="text-center">
               是否使用默认版本 v0.61.1 下载？
             </div>
-            <div class="mt-4">
-              <div class="text-subtitle-2 mb-2">切换下载源:</div>
-              <v-select
-                v-model="downloadSource"
-                :items="downloadSources"
-                item-title="label"
-                item-value="value"
-                density="compact"
-                variant="outlined"
-                hide-details
-              />
-            </div>
+            <DownloadSourceSelect v-model="downloadSource" label="切换下载源" class="mt-4" />
           </template>
           <template v-else-if="store.downloadProgress?.is_error">
             <v-alert type="error" variant="tonal" class="mb-4">
               {{ store.downloadProgress?.error_message || '下载失败' }}
             </v-alert>
-            <div class="mb-4">
-              <div class="text-subtitle-2 mb-2">切换下载源:</div>
-              <v-select
-                v-model="downloadSource"
-                :items="downloadSources"
-                item-title="label"
-                item-value="value"
-                density="compact"
-                variant="outlined"
-                hide-details
-              />
-            </div>
+            <DownloadSourceSelect v-model="downloadSource" label="切换下载源" class="mb-4" />
           </template>
           <template v-else-if="store.downloadProgress?.is_complete">
             <div class="text-center pa-4">
@@ -644,18 +614,7 @@
               <div class="text-h6 mt-4">需要下载 frpc 客户端</div>
               <div class="text-grey mt-2">点击下方按钮开始下载</div>
             </div>
-            <div class="mt-4">
-              <div class="text-subtitle-2 mb-2">选择下载源:</div>
-              <v-select
-                v-model="downloadSource"
-                :items="downloadSources"
-                item-title="label"
-                item-value="value"
-                density="compact"
-                variant="outlined"
-                hide-details
-              />
-            </div>
+            <DownloadSourceSelect v-model="downloadSource" label="选择下载源" class="mt-4" />
           </template>
         </v-card-text>
         <v-card-actions>
@@ -844,12 +803,16 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { usePresetStore, type Server, type Service } from '@/stores/preset'
 import PresetSidebar from '@/components/PresetSidebar.vue'
 import LogConsole from '@/components/LogConsole.vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import DownloadSourceSelect from '@/components/DownloadSourceSelect.vue'
 import TOML from 'smol-toml'
 import { getStatusDotClass, getStatusChipColor, getStatusText } from '@/composables/useStatus'
 import { useSnackbar } from '@/composables/useSnackbar'
+import { useDownloadSource } from '@/composables/useDownloadSource'
 
 const store = usePresetStore()
 const { snackbar, showSnackbar } = useSnackbar()
+const { getSourceLabel } = useDownloadSource()
 
 const currentTab = ref<string>('home')
 const createDialog = ref(false)
@@ -861,15 +824,7 @@ const deleteDialog = ref(false)
 const deletePresetDialog = ref(false)
 const downloadDialog = ref(false)
 const downloadSource = ref<'github' | 'ghproxy'>('ghproxy')
-const downloadSources = [
-  { value: 'ghproxy', label: 'GHProxy (国内加速)' },
-  { value: 'github', label: 'GitHub (直连)' },
-]
 
-function getSourceLabel(source: string) {
-  const item = downloadSources.find(s => s.value === source)
-  return item?.label || source
-}
 const serverToDelete = ref<string | null>(null)
 const presetToDelete = ref<{id: string, name: string} | null>(null)
 const isNewServer = ref(false)
@@ -982,7 +937,6 @@ function handleDeletePreset(id: string) {
 function doDeletePreset() {
   if (presetToDelete.value) {
     store.deletePreset(presetToDelete.value.id)
-    deletePresetDialog.value = false
     showSnackbar('预设已删除')
     presetToDelete.value = null
   }
@@ -1089,7 +1043,6 @@ function doDeleteServer() {
     currentTab.value = 'home'
     showSnackbar('服务器已删除')
   }
-  deleteDialog.value = false
   serverToDelete.value = null
 }
 
